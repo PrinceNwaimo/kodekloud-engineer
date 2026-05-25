@@ -1,14 +1,19 @@
-## Task: CI/CD Automation Using AWS CodePipeline
-The Nautilus DevOps team is responsible for managing and deploying applications efficiently. They want to streamline their CI/CD process using AWS CodePipeline and AWS S3. Your task is to set up a CI/CD pipeline that automates the deployment of a sample web application on an S3 bucket configured as a static website.
+## Task: Configure NAT Gateway for Internet Access in a Private VPC
+The Nautilus DevOps team is tasked with enabling internet access for an EC2 instance running in a private subnet. This instance should be able to upload a test file to a public S3 bucket once it can access the internet. To achieve this, the team must set up a NAT Gateway in a public subnet within the same VPC.
 
-For this task, perform the following steps:
-1. There is a bucket named `datacenter-source-21170` which contains a static website source code. Create a new S3 bucket named `datacenter-deployment-31991`. Configure the bucket to serve static website content and ensure the bucket is publicly accessible.
-2. Create an AWS CodePipeline named `datacenter-webapp-pipeline` with the following stages:
-    - **Source**: Source Provider - AWS S3, Bucket Name - `datacenter-source-21170`.
-    - **Build**: Build Provider - AWS CodeBuild, Project Name - `datacenter-build-project`, Environment - Managed image, `aws/codebuild/amazonlinux2-x86_64-standard:4.0`, Linux, and set the Image version to `Always use the latest image` for this runtime version. Insert the necessary build commands in the Build commands section to directly upload the `index.html` file to the S3 bucket.
 
-**Expected Outcome:**
-When any changes made to the file `index.html` in `datacenter-source-21170` bucket, the pipeline should automatically build the project using the inserted build commands and deploy the `index.html` file to the `datacenter-deployment-31991` bucket. The S3 bucket should be configured to allow public access, and the website should be accessible via the S3 static website URL.
+1. A VPC named `datacenter-priv-vpc` and a private subnet `datacenter-priv-subnet` have already been created.
+2. An EC2 instance named `datacenter-priv-ec2` is already running in the private subnet.
+3. The EC2 instance is configured with a cron job that uploads a test file to a bucket `datacenter-nat-976947076` once internet is accessible.
+
+Your task is to:
+- Create a public subnet named `datacenter-pub-subnet` in the same VPC.
+- Create an Internet Gateway and attach it to the VPC.
+- Create a route table `datacenter-pub-rt` and associate it with the public subnet.
+- Allocate an Elastic IP and create a NAT Gateway named `datacenter-natgw`.
+- Update the private route table to route `0.0.0.0/0` traffic via the NAT Gateway.  
+
+Once complete, verify that the EC2 instance can reach the internet by confirming the presence of the test file in the S3 bucket `datacenter-nat-976947076`. After completing all the configuration, please wait a few minutes for the test file to appear in the bucket, as it may take 2–3 minutes.
 
 ---
 
@@ -16,73 +21,160 @@ When any changes made to the file `index.html` in `datacenter-source-21170` buck
 
 ### Step 1: Set Variables
 ```bash
-DEST_BUCKET="datacenter-deployment-31991"
+VPC_NAME="datacenter-priv-vpc"
+PUB_SUBNET_NAME="datacenter-pub-subnet"
+PUB_RT_NAME="datacenter-pub-rt"
+NAT_GW_NAME="datacenter-natgw"
+PRIVATE_SUBNET_NAME="datacenter-priv-subnet"
+TEST_BUCKET="datacenter-nat-976947076"
 ```
 
-### Step 2: Create the Deployment S3 Bucket
-Create bucket
+### Step 2: Get the VPC ID
 ```bash
-aws s3api create-bucket \
-  --bucket $DEST_BUCKET
-```
-Enable static website hosting
-```bash
-aws s3 website s3://$DEST_BUCKET/ \
-  --index-document index.html
+VPC_ID=$(aws ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=$VPC_NAME" \
+  --query "Vpcs[0].VpcId" \
+  --output text)
+
+echo $VPC_ID
 ```
 
-### Step 3: Make the Bucket Publicly Accessible
-Disable block public access
+### Step 3: Create a Public Subnet
+Create a public subnet in the same VPC.
 ```bash
-aws s3api put-public-access-block \
-  --bucket $DEST_BUCKET \
-  --public-access-block-configuration \
-  BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false
+aws ec2 create-subnet \
+  --vpc-id $VPC_ID \
+  --cidr-block 10.0.2.0/24 \
+  --availability-zone ap-south-1a \
+  --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=$PUB_SUBNET_NAME}]"
 ```
-Create bucket policy file
+Get the subnet ID:
 ```bash
-cat <<EOF > bucket-policy.json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::$DEST_BUCKET/*"
-    }
-  ]
-}
-EOF
+PUB_SUBNET_ID=$(aws ec2 describe-subnets \
+  --filters "Name=tag:Name,Values=$PUB_SUBNET_NAME" \
+  --query "Subnets[0].SubnetId" \
+  --output text)
+
+echo $PUB_SUBNET_ID
 ```
-Apply bucket policy for public read access
+Enable auto-assign public IPs:
 ```bash
-aws s3api put-bucket-policy \
-  --bucket $DEST_BUCKET \
-  --policy file://bucket-policy.json
+aws ec2 modify-subnet-attribute \
+  --subnet-id $PUB_SUBNET_ID \
+  --map-public-ip-on-launch
 ```
 
-### Step 4: Create CodeBuild Project (from AWS Management console)
-Create CodeBuild project as per the task description 
-- Make sure codebuild has amazon s3 full access for simplicity (not recommended in production)
-- Add build commands to upload `index.html` to the deployment bucket
-  ```bash
-  version: 0.2
+### Step 4: Create and Attach an Internet Gateway
+Create the Internet Gateway:
+```bash
+IGW_ID=$(aws ec2 create-internet-gateway \
+  --query 'InternetGateway.InternetGatewayId' \
+  --output text)
 
-  phases:
-    build:
-      commands:
-        - echo "Deploying index.html to S3 static website bucket"
-        - aws s3 cp *.html s3://<deployment_bucket_name>/index.html
-  ```
+echo $IGW_ID
+```
+Attach it to the VPC:
+```bash
+aws ec2 attach-internet-gateway \
+  --internet-gateway-id $IGW_ID \
+  --vpc-id $VPC_ID
+```
+Add a Name tag:
+```bash
+aws ec2 create-tags \
+  --resources $IGW_ID \
+  --tags Key=Name,Value=datacenter-igw
+```
 
-### Step 5: Create CodePipeline
-- Select `Build custom pipeline` category  
-  ![pipeline category](assets/day45_01.png)
-- Enter pipeline settings as per the task description  
-- Add Source stage with Amazon s3 as source provider  
-  ![source stage](assets/day45_02.png)
-- Add build stage with AWS codebuild as build provider
-- Select previously created codebuild project from dropdown  
-  ![build stage](assets/day45_03.png)
-- Skip other stages and create pipeline
+### Step 5: Create Public Route Table
+Create route table:
+```bash
+PUB_RT_ID=$(aws ec2 create-route-table \
+  --vpc-id $VPC_ID \
+  --query 'RouteTable.RouteTableId' \
+  --output text)
+
+echo $PUB_RT_ID
+```
+Tag the route table:
+```bash
+aws ec2 create-tags \
+  --resources $PUB_RT_ID \
+  --tags Key=Name,Value=$PUB_RT_NAME
+```
+Create internet route:
+```bash
+aws ec2 create-route \
+  --route-table-id $PUB_RT_ID \
+  --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id $IGW_ID
+```
+Associate the route table with the public subnet:
+```bash
+aws ec2 associate-route-table \
+  --subnet-id $PUB_SUBNET_ID \
+  --route-table-id $PUB_RT_ID
+```
+
+### Step 6: Allocate Elastic IP
+```bash
+EIP_ALLOC_ID=$(aws ec2 allocate-address \
+  --domain vpc \
+  --query 'AllocationId' \
+  --output text)
+
+echo $EIP_ALLOC_ID
+```
+
+### Step 7: Create NAT Gateway
+Create the NAT Gateway in the public subnet:
+```bash
+NAT_GW_ID=$(aws ec2 create-nat-gateway \
+  --subnet-id $PUB_SUBNET_ID \
+  --allocation-id $EIP_ALLOC_ID \
+  --tag-specifications "ResourceType=natgateway,Tags=[{Key=Name,Value=$NAT_GW_NAME}]" \
+  --query 'NatGateway.NatGatewayId' \
+  --output text)
+
+echo $NAT_GW_ID
+```
+Wait until the NAT Gateway becomes available:
+```bash
+aws ec2 wait nat-gateway-available \
+  --nat-gateway-ids $NAT_GW_ID
+```  
+
+### Step 8: Update the Private Route Table
+Get the private subnet ID:
+```bash
+PRIV_SUBNET_ID=$(aws ec2 describe-subnets \
+  --filters "Name=tag:Name,Values=$PRIVATE_SUBNET_NAME" \
+  --query "Subnets[0].SubnetId" \
+  --output text)
+
+echo $PRIV_SUBNET_ID
+```
+Get the private route table associated with the private subnet:
+```bash
+PRIV_RT_ID=$(aws ec2 describe-route-tables \
+  --filters "Name=association.subnet-id,Values=$PRIV_SUBNET_ID" \
+  --query "RouteTables[0].RouteTableId" \
+  --output text)
+
+echo $PRIV_RT_ID
+```
+Add default route through NAT Gateway:
+```bash
+aws ec2 create-route \
+  --route-table-id $PRIV_RT_ID \
+  --destination-cidr-block 0.0.0.0/0 \
+  --nat-gateway-id $NAT_GW_ID
+```
+
+### Step 9: Verify Internet Connectivity
+Wait 2–3 minutes for the cron job running on datacenter-priv-ec2 to upload the test file.  
+Check the S3 bucket contents:
+```bash
+aws s3 ls s3://$TEST_BUCKET
+```
+If the setup is correct, you should see the uploaded test file in the bucket.
