@@ -1,0 +1,105 @@
+The Nautilus DevOps teams is planning to set up a Grafana tool to collect and analyze analytics from some applications. They are planning to deploy it on Kubernetes cluster. Below you can find more details.
+1.) Create a deployment named grafana-deployment-nautilus using any grafana image for Grafana app. Set other parameters as per your choice.
+2.) Create NodePort type service with nodePort 32000 to expose the app.
+You do not need to make any configuration changes inside the Grafana app once deployed; just make sure you can access the Grafana login page.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+solution:
+First, let me check if we have a namespace to deploy to, or I'll use the default namespace:
+kubectl get namespaces
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment-nautilus
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+          name: grafana
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"  # Default password for testing
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service-nautilus
+  labels:
+    app: grafana
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 32000
+    protocol: TCP
+  selector:
+    app: grafana
+
+kubectl apply -f grafana-deployment.yaml
+kubectl get deployments
+kubectl get pods
+kubectl get svc
+kubectl get svc grafana-service-nautilus
+
+kubectl describe svc grafana-service-nautilus
+To access the Grafana login page, you would use:
+
+URL: http://<node-ip>:32000
+
+Default username: admin
+
+Default password: admin (or whatever was set in the environment variable)
+
+If you want to get the node IP where the pod is running:
+
+bash
+kubectl get nodes -o wide
+And to get more details about the Grafana pod:
+
+bash
+kubectl get pods -l app=grafana
+kubectl logs -l app=grafana
+Summary of what was created:
+
+Deployment: grafana-deployment-nautilus
+
+Uses grafana/grafana:latest image
+
+Single replica
+
+Port 3000 exposed
+
+Environment variable set for admin password
+
+Service: grafana-service-nautilus
+
+Type: NodePort
+
+NodePort: 32000
+
+Maps port 3000 (container) to port 32000 (node)
+
+The Grafana instance is now deployed and accessible via port 32000 on any node in the cluster. You should be able to access the Grafana login page using the node's IP address and port 32000.
+
