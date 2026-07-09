@@ -1,0 +1,149 @@
+Last week, the Nautilus DevOps team deployed a redis app on Kubernetes cluster, which was working fine so far. 
+This morning one of the team members was making some changes in this existing setup, but he made some mistakes and the app went down. 
+We need to fix this as soon as possible. Please take a look.
+The deployment name is redis-deployment. The pods are not in running state right now, so please look into the issue and fix the same.
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+solution
+Step 1: Check the deployment and pod status
+bash
+kubectl get deployments
+kubectl get pods
+kubectl describe deployment redis-deployment
+kubectl describe pods
+Let me check what's wrong:
+
+bash
+kubectl get pods
+The output will show the pod status (CrashLoopBackOff, Error, Pending, etc.).
+
+Step 2: Check pod logs
+bash
+kubectl logs <pod-name>
+If there are multiple pods, check logs for each:
+
+bash
+kubectl logs -l app=redis  # if labeled appropriately
+Step 3: Get detailed description
+bash
+kubectl describe pod <pod-name>
+This will show events and any error messages.
+
+Step 4: Check the deployment YAML
+bash
+kubectl get deployment redis-deployment -o yaml
+Step 5: Common issues and fixes
+Based on typical Redis deployment issues, here are the most likely problems and solutions:
+
+Issue A: Incorrect image or tag
+The deployment might be using a wrong image tag.
+
+Fix: Edit the deployment to use the correct Redis image:
+
+bash
+kubectl edit deployment redis-deployment
+Change the image to a valid one, e.g., redis:alpine or redis:7.0
+
+Issue B: Missing or incorrect environment variables
+Redis might need specific environment variables.
+
+Fix: Check and update env vars:
+
+bash
+kubectl edit deployment redis-deployment
+Issue C: Persistent Volume issues
+If Redis uses persistent storage, there might be PVC binding issues.
+
+bash
+kubectl get pvc
+kubectl get pv
+Issue D: Resource limits too low
+The container might be getting killed due to memory limits.
+
+Fix: Adjust resource limits:
+
+yaml
+resources:
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+  requests:
+    memory: "128Mi"
+    cpu: "250m"
+Issue E: ConfigMap or Secret errors
+If Redis uses ConfigMaps or Secrets, they might be missing or have wrong data.
+
+bash
+kubectl get configmaps
+kubectl get secrets
+Step 6: Quick fix approach
+If you want to quickly restore the deployment, you can:
+
+Delete and recreate the deployment with a working configuration:
+
+bash
+kubectl delete deployment redis-deployment
+Create a new deployment with a known working configuration:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+Save this as redis-deployment.yaml and apply:
+
+bash
+kubectl apply -f redis-deployment.yaml
+Step 7: Verify the fix
+bash
+kubectl get pods
+kubectl get deployment redis-deployment
+kubectl logs <new-pod-name>
+Let me run the diagnostics now:
+Actually, since I'm in a troubleshooting role, let me check what's actually happening:
+
+bash
+# Check all pods
+kubectl get pods --all-namespaces
+
+# Check deployment status
+kubectl describe deployment redis-deployment
+
+# Check pod details
+kubectl describe pod -l app=redis
+
+# Get logs
+kubectl logs -l app=redis --tail=50
+Please run these commands and share the output with me so I can identify the exact issue. The most common fixes are:
+
+If the pod is in CrashLoopBackOff: Check logs - likely a misconfiguration or wrong command
+
+If the pod is Pending: Check PVC or node resources
+
+If the pod is ImagePullBackOff: Wrong image name or tag
+
+If the pod is Error: Check the container command or arguments
