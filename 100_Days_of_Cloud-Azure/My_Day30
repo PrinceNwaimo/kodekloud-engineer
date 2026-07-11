@@ -1,0 +1,80 @@
+The Nautilus Devops team is strategizing the migration of a portion of their infrastructure to Azure. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. Recently, they started working on creating and configuring some database instances on Azure.
+For this task, create one publicly accessible Azure SQL Database instance along with the following details:
+1) The name of the Azure SQL Database must be devops-sqldb.
+2) The server name must be devops-server-15364 under southcentralus.
+3) The compute + storage configuration should be Basic (For less demanding workloads).
+4) The backup storage redundancy should be Locally-redundant backup storage.
+5) Set the login admin username to devops-admin and set an appropriate password.
+6) Set the database size to 2 GiB.
+7) Keep the rest of the configurations as default. Finally, make sure the database is in the Ready state before submitting this task.
+
+solution
+1. Set the required variables
+RESOURCE_GROUP=<your-resource-group>
+LOCATION=southcentralus
+SERVER=devops-server-15364
+DATABASE=devops-sqldb
+ADMIN_USER=devops-admin
+ADMIN_PASSWORD='DevOps@12345!'
+
+If your lab specifies a different resource group, use that instead. You can list it with:
+
+az group list -o table
+2. Create the Azure SQL logical server
+az sql server create \
+    --name $SERVER \
+    --resource-group $RESOURCE_GROUP \
+    --location $LOCATION \
+    --admin-user $ADMIN_USER \
+    --admin-password "$ADMIN_PASSWORD"
+3. Allow public access
+
+Create a firewall rule allowing all Azure services (common lab requirement):
+
+az sql server firewall-rule create \
+    --resource-group $RESOURCE_GROUP \
+    --server $SERVER \
+    --name AllowAzureServices \
+    --start-ip-address 0.0.0.0 \
+    --end-ip-address 0.0.0.0
+
+If the lab expects full public accessibility, add:
+
+az sql server firewall-rule create \
+    --resource-group $RESOURCE_GROUP \
+    --server $SERVER \
+    --name AllowAll \
+    --start-ip-address 0.0.0.0 \
+    --end-ip-address 255.255.255.255
+4. Create the SQL Database
+az sql db create \
+    --resource-group $RESOURCE_GROUP \
+    --server $SERVER \
+    --name $DATABASE \
+    --service-objective Basic \
+    --max-size 2GB \
+    --backup-storage-redundancy Local
+
+This creates:
+
+Database: devops-sqldb
+Server: devops-server-15364
+Region: southcentralus
+Compute tier: Basic
+Backup redundancy: Locally-redundant
+Maximum size: 2 GiB
+5. Verify it is Ready
+az sql db show \
+    --resource-group $RESOURCE_GROUP \
+    --server $SERVER \
+    --name $DATABASE \
+    --query "{Name:name,Status:status,Edition:currentServiceObjectiveName,MaxSize:maxSizeBytes}" \
+    -o table
+
+Expected output:
+
+Name            Status   Edition   MaxSize
+--------------  -------  --------  ----------
+devops-sqldb    Online   Basic     2147483648
+
+The database status should be Online (Ready).
