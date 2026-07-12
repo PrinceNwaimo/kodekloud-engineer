@@ -1,0 +1,55 @@
+The Nautilus DevOps team is working to deploy some tools in Kubernetes cluster. Some of the tools are licence based so that licence information needs to be stored securely within Kubernetes cluster. Therefore, the team wants to utilize Kubernetes secrets to store those secrets. Below you can find more details about the requirements:
+We already have a secret key file official.txt under the /opt/ directory. Create a generic secret named official, it should contain the password/license-number present in official.txt file.
+Also create a pod named secret-devops.
+Configure pod's spec as container name should be secret-container-devops, image should be debian with latest tag (remember to mention the tag with image). Use sleep command for container so that it remains in running state. Consume the created secret and mount it under /opt/demo within the container.
+To verify you can exec into the container secret-container-devops, to check the secret key under the mounted path /opt/demo. Before hitting the Check button please make sure pod/pods are in running state, also validation can take some time to complete so keep patience.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+Solution:
+1. Create the generic secret
+kubectl create secret generic official --from-file=official.txt=/opt/official.txt
+
+Verify:
+
+kubectl get secret official
+2. Create the Pod manifest
+
+Create secret-devops.yaml:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-devops
+spec:
+  containers:
+  - name: secret-container-devops
+    image: debian:latest
+    command:
+      - sleep
+      - "3600"
+    volumeMounts:
+    - name: official-volume
+      mountPath: /opt/demo
+      readOnly: true
+  volumes:
+  - name: official-volume
+    secret:
+      secretName: official
+3. Create the Pod
+kubectl apply -f secret-devops.yaml
+4. Wait until it is running
+kubectl get pods
+
+Wait until you see:
+
+secret-devops   1/1   Running
+5. Verify the secret is mounted
+kubectl exec -it secret-devops -- ls -l /opt/demo
+
+You should see:
+
+official.txt
+
+Then display its contents:
+
+kubectl exec -it secret-devops -- cat /opt/demo/official.txt
