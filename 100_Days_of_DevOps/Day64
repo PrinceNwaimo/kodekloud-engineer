@@ -1,0 +1,240 @@
+One of the DevOps engineers was trying to deploy a python app on Kubernetes cluster. Unfortunately, due to some mis-configuration, the application is not coming up. Please take a look into it and fix the issues. Application should be accessible on the specified nodePort.
+The deployment name is python-deployment-devops, its using poroko/flask-demo-app image. The deployment and service of this app is already deployed.
+nodePort should be 32345 and targetPort should be python flask app's default port.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+solution
+1. Check the deployment and service
+kubectl get deploy
+kubectl get svc
+
+Then inspect them:
+
+kubectl describe deployment python-deployment-devops
+kubectl describe svc python-service-devops
+
+If you don't know the service name:
+
+kubectl get svc
+The service is already using NodePort 32345, but I can already see two problems:
+
+Deployment image is incorrect
+Current: poroko/flask-app-demo
+Required: poroko/flask-demo-app
+Service targetPort is incorrect
+Current: 8080
+Should be 5000 (the Flask app's default port)
+
+The deployment has 0 available pods, so let's also check why the pod isn't starting.
+
+Step 1: Check the pod
+kubectl get pods
+
+Then describe it:
+
+kubectl describe pod <pod-name>
+
+If the image cannot be pulled, you'll see ImagePullBackOff or ErrImagePull.
+
+Step 2: Fix the deployment image
+kubectl set image deployment/python-deployment-devops \
+python-container-devops=poroko/flask-demo-app
+
+Wait for rollout:
+
+kubectl rollout status deployment/python-deployment-devops
+Step 3: Fix the Service
+
+Patch the target port to 5000:
+
+kubectl patch svc python-service-devops -p \
+'{"spec":{"ports":[{"port":8080,"targetPort":5000,"nodePort":32345}]}}'
+
+or edit it:
+
+kubectl edit svc python-service-devops
+
+and make it:
+
+ports:
+- port: 8080
+  targetPort: 5000
+  nodePort: 32345
+Step 4: Verify
+kubectl get pods
+kubectl get svc
+kubectl get endpoints python-service-devops
+
+The endpoints should no longer be empty.
+
+Before doing anything else, run:
+
+kubectl get pods
+
+and paste the output. That will confirm whether the issue is only the wrong image or if there's another pod startup error.
+
+thor@jump-host ~$ kubectl get pods
+NAME                                        READY   STATUS             RESTARTS   AGE
+python-deployment-devops-7dd8f6ddf8-47s8x   0/1     ImagePullBackOff   0          3m58s
+thor@jump-host ~$ kubectl describe pod <pod-name>
+bash: syntax error near unexpected token newline'
+thor@jump-host ~$ kubectl describe pod python-deployment-devops-7dd8f6ddf8-47s8x
+Name:             python-deployment-devops-7dd8f6ddf8-47s8x
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             jump-host/10.244.13.38
+Start Time:       Tue, 14 Jul 2026 05:52:17 +0000
+Labels:           app=python_app
+                  pod-template-hash=7dd8f6ddf8
+Annotations:      <none>
+Status:           Pending
+IP:               10.22.0.9
+IPs:
+  IP:           10.22.0.9
+Controlled By:  ReplicaSet/python-deployment-devops-7dd8f6ddf8
+Containers:
+  python-container-devops:
+    Container ID:   
+    Image:          poroko/flask-app-demo
+    Image ID:       
+    Port:           5000/TCP
+    Host Port:      0/TCP
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-cdb6b (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       False 
+  ContainersReady             False 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-cdb6b:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  4m42s                 default-scheduler  Successfully assigned default/python-deployment-devops-7dd8f6ddf8-47s8x to jump-host
+  Normal   Pulling    100s (x5 over 4m41s)  kubelet            Pulling image "poroko/flask-app-demo"
+  Warning  Failed     99s (x5 over 4m40s)   kubelet            Failed to pull image "poroko/flask-app-demo": failed to pull and unpack image "docker.io/poroko/flask-app-demo:latest": failed to resolve reference "docker.io/poroko/flask-app-demo:latest": pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed
+  Warning  Failed     99s (x5 over 4m40s)   kubelet            Error: ErrImagePull
+  Warning  Failed     43s (x15 over 4m39s)  kubelet            Error: ImagePullBackOff
+  Normal   BackOff    5s (x18 over 4m39s)   kubelet            Back-off pulling image "poroko/flask-app-demo"
+thor@jump-host ~$ 
+
+The problem is confirmed.
+
+The image name is wrong.
+
+Current (invalid):
+
+poroko/flask-app-demo
+
+Required:
+
+poroko/flask-demo-app
+1. Fix the deployment image
+kubectl set image deployment/python-deployment-devops \
+python-container-devops=poroko/flask-demo-app
+
+Wait for the rollout:
+
+kubectl rollout status deployment/python-deployment-devops
+2. Fix the Service targetPort
+
+The service currently has:
+
+Port:        8080
+TargetPort:  8080
+NodePort:    32345
+
+The Flask app listens on 5000, so change only the targetPort:
+
+kubectl patch svc python-service-devops \
+-p '{"spec":{"ports":[{"port":8080,"targetPort":5000,"nodePort":32345}]}}'
+3. Verify
+kubectl get pods
+kubectl get svc
+kubectl get endpoints python-service-devops
+
+The pod should become Running, and the endpoints should no longer be empty.
+
+If the kubectl set image command fails because the image poroko/flask-demo-app doesn't exist either, run:
+
+kubectl describe deployment python-deployment-devops
+
+or
+
+kubectl rollout status deployment/python-deployment-devops
+
+and share the output. Some KodeKloud labs intentionally use a different image name than the prompt, and we'll identify the correct one.
+
+thor@jump-host ~$ kubectl patch svc python-service-devops \
+-p '{"spec":{"ports":[{"port":8080,"targetPort":5000,"nodePort":32345}]}}'
+service/python-service-devops patched
+thor@jump-host ~$ kubectl get pods
+NAME                                        READY   STATUS    RESTARTS   AGE
+python-deployment-devops-6fdb46f474-8wfgc   1/1     Running   0          77s
+thor@jump-host ~$ kubectl get svc
+NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+kubernetes              ClusterIP   10.43.0.1       <none>        443/TCP          23m
+python-service-devops   NodePort    10.43.143.118   <none>        8080:32345/TCP   7m15s
+thor@jump-host ~$ kubectl get endpoints python-service-devops
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME                    ENDPOINTS         AGE
+python-service-devops   10.22.0.10:5000   7m32s
+thor@jump-host ~$ 
+
+Everything now looks correct.
+
+✅ Pod is running:
+
+python-deployment-devops-6fdb46f474-8wfgc   1/1   Running
+
+✅ Service is a NodePort on the required port:
+
+8080:32345/TCP
+
+✅ Service endpoints point to the Flask application's default port:
+
+10.22.0.10:5000
+
+The last thing to verify is that the application is actually reachable through the NodePort:
+
+kubectl get nodes -o wide
+
+Then test it (replace <NODE-IP> with the node's internal IP if needed):
+
+curl http://<NODE-IP>:32345
+
+or, since this is a single-node K3s cluster running on jump-host, you can often test locally:
+
+curl http://localhost:32345
+
+or
+
+curl http://127.0.0.1:32345
+
+If the lab still reports failure despite the pod and service looking correct, run:
+
+kubectl get deployment python-deployment-devops -o yaml | grep image
+
+The expected image should be:
+
+poroko/flask-demo-app
+
+If that's what you have, your configuration matches the task requirements and the application should be accessible on NodePort 32345.
