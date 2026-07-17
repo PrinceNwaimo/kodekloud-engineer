@@ -1,0 +1,91 @@
+The Nautilus application development team observed some performance issues with one of the application that is deployed in Kubernetes cluster. After looking into number of factors, the team has suggested to use some in-memory caching utility for DB service. After number of discussions, they have decided to use Redis. Initially they would like to deploy Redis on kubernetes cluster for testing and later they will move it to production. Please find below more details about the task:
+Create a redis deployment with following parameters:
+Create a config map called my-redis-config having maxmemory 2mb in redis-config.
+Name of the deployment should be redis-deployment, it should use
+redis:alpine image and container name should be redis-container. Also make sure it has only 1 replica.
+The container should request for 1 CPU.
+Mount 2 volumes:
+a. An Empty directory volume called data at path /redis-master-data.
+b. A configmap volume called redis-config at path /redis-master.
+c. The container should expose the port 6379.
+Finally, redis-deployment should be up and running.
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+solution
+
+Create the ConfigMap first, then deploy Redis using it.
+
+1. Create the ConfigMap
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-redis-config
+data:
+  redis-config: |
+    maxmemory 2mb
+EOF
+
+
+2. Create the Deployment
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis-container
+        image: redis:alpine
+        command:
+        - redis-server
+        - /redis-master/redis-config
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: "1"
+        volumeMounts:
+        - name: data
+          mountPath: /redis-master-data
+        - name: redis-config
+          mountPath: /redis-master
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: redis-config
+        configMap:
+          name: my-redis-config
+EOF
+3. Verify the deployment
+kubectl get configmap my-redis-config
+kubectl get deployment redis-deployment
+kubectl get pods
+kubectl describe deployment redis-deployment
+
+Wait until the pod shows:
+
+NAME                                READY   STATUS    RESTARTS   AGE
+redis-deployment-xxxxxxxxxx-xxxxx   1/1     Running   0          xxs
+
+This satisfies all the requirements:
+
+✅ ConfigMap my-redis-config with key redis-config containing maxmemory 2mb
+✅ Deployment redis-deployment
+✅ Image redis:alpine
+✅ Container redis-container
+✅ 1 replica
+✅ CPU request of 1
+✅ emptyDir volume data mounted at /redis-master-data
+✅ ConfigMap volume redis-config mounted at /redis-master
+✅ Exposes port 6379
+✅ Redis starts using the mounted configuration file.
