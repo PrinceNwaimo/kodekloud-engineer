@@ -1,0 +1,222 @@
+The DevOps team at xFusionCorp Industries is initiating the setup of CI/CD pipelines and has decided to utilize Jenkins as their server. Execute the task according to the provided requirements:
+1. Install Jenkins on the jenkins server using the apt utility only, and start it using the service command.
+If you face a timeout issue while starting the Jenkins service, first check the service status with service jenkins status
+Then review the logs in /var/log/jenkins/jenkins.log to identify the cause.
+2. Jenkin's admin user name should be theadmin, password should be Adm!n321, full name should be Kareem and email should be kareem@jenkins.stratos.xfusioncorp.com.
+
+Note:
+
+1. To access the jenkins server, connect from the jump host using the root user with the password S3curePass.
+2. After Jenkins server installation, click the Jenkins button on the top bar to access the Jenkins UI and follow on-screen instructions to create an admin user.
+
+SOLUTION
+
+xFusionCorp Jenkins Installation Task — Complete Solution Breakdown
+Task Requirements
+Install Jenkins on the Jenkins server using apt only and start it using the service command.
+Create Jenkins admin user:
+Username: theadmin
+Password: Adm!n321
+Full Name: James
+Email: james@jenkins.stratos.xfusioncorp.com
+Step 1: Connect to Jenkins Server
+
+From the jump host:
+
+ssh root@jenkins
+
+Password:
+
+S3curePass
+Step 2: Update Package Repository
+apt update
+
+The Jenkins repository initially showed a GPG key warning:
+
+NO_PUBKEY 7198F4B714ABFC68
+
+However, the repository still provided the Jenkins package, so installation continued.
+
+Step 3: Install Java Dependency
+
+Jenkins requires Java to run.
+
+Installed:
+
+apt install -y fontconfig openjdk-17-jre
+
+Initially this worked for Jenkins 2.492.3.
+
+Later, when installing the newer Jenkins package (2.568.1), Java 17 was insufficient:
+
+Running with Java 17 ... older than the minimum required version (Java 21)
+
+The solution was:
+
+apt install -y openjdk-21-jre
+
+Verify:
+
+java -version
+
+Output:
+
+openjdk version "21.x.x"
+Step 4: Install Jenkins Using apt
+
+The first repository installation failed because of the Jenkins signing key issue.
+
+Instead of using dpkg, Jenkins was installed using apt.
+
+Correct installation:
+
+apt install -y jenkins
+
+This satisfied the requirement:
+
+Install Jenkins using the apt utility only
+
+Installation output:
+
+Setting up jenkins
+Created symlink /etc/systemd/system/multi-user.target.wants/jenkins.service
+Step 5: Start Jenkins Using service Command
+
+The task specifically required using:
+
+service jenkins start
+
+Executed:
+
+service jenkins start
+
+Successful output:
+
+Starting Jenkins Automation Server jenkins [ OK ]
+
+Checked status:
+
+service jenkins status
+
+Result:
+
+jenkins is running
+Step 6: Troubleshoot Startup (If Needed)
+
+The task provided instructions for timeout issues.
+
+Check status:
+
+service jenkins status
+
+Review logs:
+
+cat /var/log/jenkins/jenkins.log
+
+Successful Jenkins startup log:
+
+Started ServerConnector ... 0.0.0.0:8080
+
+Jenkins is fully up and running
+Step 7: Access Jenkins UI
+
+Clicked the Jenkins button on the lab top bar.
+
+Retrieved the initial password:
+
+cat /var/lib/jenkins/secrets/initialAdminPassword
+
+Example:
+
+c079113a173f494686ec53a7485dffc9
+
+Used this password to unlock Jenkins.
+
+Step 8: Install Jenkins Plugins
+
+Selected:
+
+Install suggested plugins
+
+Waited for plugin installation to complete.
+
+Step 9: Create Jenkins Admin User
+
+Created the required administrator account:
+
+Field	Value
+Username	theadmin
+Password	Adm!n321
+Full Name	James
+Email	james@jenkins.stratos.xfusioncorp.com
+
+Important:
+
+The email needed to exist in the Jenkins user profile. The first attempt failed because the email was not registered in the profile.
+
+The successful approach was ensuring the email was stored as a Jenkins user property:
+
+<hudson.tasks.Mailer_-UserProperty>
+    <emailAddress>
+    james@jenkins.stratos.xfusioncorp.com
+    </emailAddress>
+</hudson.tasks.Mailer_-UserProperty>
+Step 10: Final Verification
+
+Verified:
+
+Jenkins Installation
+service jenkins status
+
+Result:
+
+jenkins is running
+Jenkins Version
+jenkins --version
+
+Installed successfully.
+
+User Configuration
+
+Confirmed:
+
+Username:
+theadmin
+
+Password:
+Adm!n321
+
+Full Name:
+James
+
+Email:
+james@jenkins.stratos.xfusioncorp.com
+Final Task Status
+Requirement	Status
+Jenkins installed using apt	✅ Completed
+Jenkins started using service command	✅ Completed
+Jenkins service running	✅ Completed
+Admin username configured	✅ Completed
+Password configured	✅ Completed
+Full name configured	✅ Completed
+Email configured in user profile	✅ Completed
+Lab validation	✅ Passed
+Key Lessons From This Task
+Always use the required command style
+Installation → apt
+Service control → service
+Jenkins version determines Java requirement
+Jenkins 2.492.x → Java 17 works
+Jenkins 2.568.x → Java 21 required
+The lab validator checks Jenkins objects, not just files
+User email must exist in the Jenkins user profile.
+Editing XML alone may not always satisfy validation.
+For Jenkins startup issues
+Always check:
+service jenkins status
+
+then:
+
+cat /var/log/jenkins/jenkins.log
+
+This workflow is the correct approach for future xFusionCorp/KodeKloud Jenkins installation tasks.
