@@ -1,0 +1,43 @@
+The Nautilus DevOps team has recently setup a Jenkins server, which they want to use for some CI/CD jobs. Before that they want to install some plugins which will be used in most of the jobs. Please find below more details about the task
+1. Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+2. Once logged in, install the Git and GitLab plugins. You may need to restart Jenkins to complete the plugin installation; if required, opt to Restart Jenkins when installation is complete and no jobs are running on the plugin installation/update page (Update Centre).
+
+Note:
+1. After restarting Jenkins, wait for the login page to reappear before proceeding.
+2. For tasks involving web UI changes, capture screenshots to share for review or consider using screen recording software like loom.com for documentation and sharing.
+
+SOLUTION
+
+This is a Jenkins UI task. Follow these steps:
+
+Open the Jenkins UI by clicking the Jenkins button in the lab's top bar.
+Log in with:
+Username: admin
+Password: Adm!n321
+From the Jenkins dashboard, go to:
+Manage Jenkins → Plugins (or Manage Plugins, depending on the Jenkins version).
+Open the Available plugins tab.
+Search for and select:
+✅ Git
+✅ GitLab
+Click:
+Install (or Install without restart if available).
+If prompted, select:
+✅ Restart Jenkins when installation is complete and no jobs are running
+Wait for Jenkins to restart completely.
+Once the login page appears again, log in using:
+Username: admin
+Password: Adm!n321
+Verify the installation:
+Go to Manage Jenkins → Plugins → Installed.
+Confirm that both Git and GitLab plugins are listed.
+Screenshot recommendations
+
+Capture screenshots of:
+
+Jenkins login page.
+Plugin installation page showing Git and GitLab selected.
+Installation progress.
+Installed plugins page after the restart showing both plugins installed.
+
+Once both plugins appear under Installed, the task is complete.
