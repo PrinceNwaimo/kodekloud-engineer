@@ -164,3 +164,17 @@ aws elbv2 describe-load-balancers \
   --output text
 ```
 Open the ALB DNS name in a browser, you should see the default `nginx` page
+
+
+
+
+To Launch Template
+aws ec2 create-launch-template \
+  --launch-template-name $LAUNCH_TEMPLATE \
+  --version-description "v1" \
+  --launch-template-data "{
+    \"ImageId\":\"$AMI_ID\",
+    \"InstanceType\":\"$INSTANCE_TYPE\",
+    \"SecurityGroupIds\":[\"$SG_ID\"],
+    \"UserData\":\"$USER_DATA\"
+  }"
