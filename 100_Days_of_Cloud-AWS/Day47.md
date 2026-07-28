@@ -194,3 +194,203 @@ aws cloudformation wait stack-create-complete \
   --stack-name datacenter-priority-stack    
 ```
 Test it by running the commands provided in the task description
+
+
+reat! The CloudFormation stack has been successfully created. The wait command completed without errors, which means the stack creation is complete and successful.
+
+Let's verify the stack status and resources:
+1. Check stack status
+bash
+aws cloudformation describe-stacks \
+  --stack-name datacenter-priority-stack \
+  --query "Stacks[0].[StackName, StackStatus, CreationTime]" \
+  --output table
+2. List all resources created by the stack
+bash
+aws cloudformation list-stack-resources \
+  --stack-name datacenter-priority-stack \
+  --query "StackResourceSummaries[*].[LogicalResourceId, ResourceType, ResourceStatus]" \
+  --output table
+3. View outputs from the stack (if any were defined)
+bash
+aws cloudformation describe-stacks \
+  --stack-name datacenter-priority-stack \
+  --query "Stacks[0].Outputs" \
+  --output table
+4. Get detailed stack information
+bash
+aws cloudformation describe-stacks \
+  --stack-name datacenter-priority-stack \
+  --output json
+5. Check for any events (to see what happened during creation)
+bash
+aws cloudformation describe-stack-events \
+  --stack-name datacenter-priority-stack \
+  --max-items 10 \
+  --query "StackEvents[*].[LogicalResourceId, ResourceStatus, ResourceStatusReason]" \
+  --output table
+Quick one-liner to confirm everything is healthy:
+bash
+aws cloudformation describe-stacks \
+  --stack-name datacenter-priority-stack \
+  --query "Stacks[0].[StackName, StackStatus]" \
+  --output text
+This should return:
+
+text
+datacenter-priority-stack    CREATE_COMPLETE
+Important: Keep this stack ID for reference
+text
+arn:aws:cloudformation:us-east-1:048824521363:stack/datacenter-priority-stack/9e071820-8a5e-11f1-8d5f-0affd5483141
+You can use this ARN for any future operations on this stack, such as updates or deletion.
+
+If you need to delete the stack later:
+bash
+aws cloudformation delete-stack \
+  --stack-name datacenter-priority-stack
+
+# Wait for deletion to complete
+aws cloudformation wait stack-delete-complete \
+  --stack-name datacenter-priority-stack
+Is there anything specific about the stack resources you'd like to verify or any outputs you need to access?
+
+What Problem Does This Solution Solve?
+This priority queuing system using Amazon SQS and SNS solves the critical problem of processing workload prioritization in distributed systems. Here's when and why you would use this solution:
+
+The Core Problem
+In many business applications, not all tasks are equally important or time-sensitive. Without a priority system, messages are typically processed in FIFO (First-In-First-Out) order, which can cause:
+
+Critical tasks being delayed behind less important ones
+
+SLA violations for high-value customers
+
+Inefficient resource allocation during traffic spikes
+
+Poor user experience when urgent requests wait in queue
+
+Real-World Use Cases
+E-commerce Order Processing
+
+High Priority: Premium members' orders, expedited shipping requests
+
+Low Priority: Regular orders, inventory updates, analytics data
+
+Customer Support Systems
+
+High Priority: VIP customers, critical system outages, payment issues
+
+Low Priority: General inquiries, feedback, feature requests
+
+Healthcare Applications
+
+High Priority: Emergency patient data, critical lab results
+
+Low Priority: Routine checkups, administrative updates
+
+Financial Services
+
+High Priority: Large transactions, fraud alerts, regulatory reporting
+
+Low Priority: Balance inquiries, transaction history requests
+
+IoT/Device Management
+
+High Priority: Safety alerts, system failures, security events
+
+Low Priority: Telemetry data, routine status updates
+
+How the Architecture Works
+text
+┌─────────────────┐
+│   SNS Topic     │
+│ (Priority Queue)│
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ High Priority   │     │ Low Priority    │
+│ SQS Queue       │     │ SQS Queue       │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         └───────────┬───────────┘
+                     ▼
+          ┌─────────────────────┐
+          │   Lambda Function   │
+          │ (Priority Processor)│
+          └─────────────────────┘
+Key Benefits of This Solution
+Guaranteed Priority Processing
+
+High-priority messages are always processed before low-priority ones
+
+Prevents critical tasks from being stuck behind non-urgent work
+
+Resource Optimization
+
+System resources are allocated where they matter most
+
+During peak loads, important work gets priority access to compute capacity
+
+Scalability
+
+Each queue can scale independently based on message volume
+
+Lambda can process messages concurrently from both queues
+
+Decoupling and Reliability
+
+SNS decouples publishers from subscribers
+
+SQS provides reliable message delivery with retry capabilities
+
+Cost Efficiency
+
+Process high-priority messages immediately
+
+Batch or delay low-priority processing during off-peak hours
+
+Pay only for what you process
+
+When to Use This Solution
+Ideal Scenarios:
+
+✅ You have clear business priority tiers (e.g., Gold/Silver/Bronze customers)
+
+✅ Urgent tasks must be processed within strict time constraints
+
+✅ You need to maintain service level agreements (SLAs)
+
+✅ Workloads are unpredictable but priorities are well-defined
+
+✅ You want to implement "circuit breaker" pattern for critical paths
+
+Not Recommended When:
+
+❌ All messages have equal importance
+
+❌ Order of processing doesn't matter (pure event streaming)
+
+❌ You need exactly-once ordering across all messages
+
+❌ Message volume is very low (single queue would suffice)
+
+Testing the Solution
+To test your deployment:
+
+bash
+# Publish a message with priority metadata
+aws sns publish \
+  --topic-arn "arn:aws:sns:us-east-1:048824521363:datacenter-Priority-Queues-Topic" \
+  --message '{"priority": "high", "data": "Urgent request"}' \
+  --message-attributes '{"priority": {"DataType": "String", "StringValue": "high"}}'
+
+# Publish a low-priority message
+aws sns publish \
+  --topic-arn "arn:aws:sns:us-east-1:048824521363:datacenter-Priority-Queues-Topic" \
+  --message '{"priority": "low", "data": "Routine update"}' \
+  --message-attributes '{"priority": {"DataType": "String", "StringValue": "low"}}'
+The Lambda function will consistently process the high-priority message first, demonstrating the system's effectiveness in ensuring critical workloads are handled promptly.
+
+Conclusion
+This priority queuing solution is essential for modern cloud applications where not all work is equally important. It provides a robust, serverless architecture that ensures business-critical operations receive preferential treatment while still processing lower-priority work efficiently. This pattern is widely used in production systems handling customer-facing applications where user experience and business outcomes depend on timely processing of high-value requests.
+
