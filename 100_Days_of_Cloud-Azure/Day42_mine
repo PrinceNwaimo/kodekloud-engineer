@@ -1,0 +1,44 @@
+The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their Azure environment. As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their Azure environment.
+A private blob container named xfusion-blob-9948 already exists in the westus region under storage account xfusionst19335.
+1) Copy the contents of xfusion-blob-9948 blob container to the /opt directory on the azure-client host (the landing host once you load this lab).
+2) Delete the blob container xfusion-blob-9948 from the storage account.
+
+Solution
+Step 1: Copy the blob container contents to /opt directory
+First, I need to copy the contents of the xfusion-blob-9948 container to the /opt directory on the azure-client host.
+
+bash
+# First, let's check if we're on the azure-client host and the /opt directory exists
+ls -la /opt
+# Download all blobs from the container
+# Correct syntax using -s for source container
+az storage blob download-batch \
+    --account-name xfusionst19335 \
+    --source xfusion-blob-9948 \
+    --destination /opt \
+    --auth-mode login
+# First, get the connection string
+az storage account show-connection-string \
+    --name xfusionst19335 \
+    --resource-group <resource-group-name> \
+    --query connectionString
+
+# Then download using connection string
+az storage blob download-batch \
+    --connection-string "<connection-string>" \
+    --source-container xfusion-blob-9948 \
+    --destination /opt
+Step 2: Delete the blob container
+After confirming the files are copied to /opt, delete the container:
+
+bash
+# Delete the container
+az storage container delete \
+    --name xfusion-blob-9948 \
+    --account-name xfusionst19335 \
+    --auth-mode login
+
+# Or using connection string
+az storage container delete \
+    --name xfusion-blob-9948 \
+    --connection-string "<connection-string>"
