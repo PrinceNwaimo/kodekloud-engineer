@@ -1,0 +1,335 @@
+Some new requirements have come up to install and configure some packages on the Nautilus infrastructure under Stratos Datacenter. The Nautilus DevOps team installed and configured a new Jenkins server so they wanted to create a Jenkins job to automate this task. Find below more details and complete the task accordingly:
+1. Access the Jenkins UI by clicking on the Jenkins button in the top bar. Log in using the credentials: username admin and password Adm!n321.
+2. Create a new Jenkins job named install-packages and configure it with the following specifications:
+
+Add a string parameter named PACKAGE.
+Configure the job to install a package specified in the $PACKAGE parameter on the storage server (Stratos Datacenter).
+Build the job at least once (e.g. with parameter PACKAGE=vim-enhanced) so the package is installed on the Storage server and can be verified.
+
+
+Note:
+1. Ensure to install any required plugins and restart the Jenkins service if necessary. Opt for Restart Jenkins when installation is complete and no jobs are running on the plugin installation/update page. Refresh the UI page if needed after restarting the service.
+2. Verify that the Jenkins job runs successfully on repeated executions to ensure reliability.
+3. Capture screenshots of your configuration for documentation and review purposes. Alternatively, use screen recording software like loom.com for comprehensive documentation and sharing.
+
+Solution
+To know whether your storage server (ststor01) is Ubuntu, RHEL, CentOS, Rocky, etc., log into it and check the OS information.
+
+You already connected with:
+
+ssh natasha@ststor01
+
+Once you are on the storage server, run:
+
+cat /etc/os-release
+
+Example outputs:
+
+If it is Ubuntu:
+NAME="Ubuntu"
+VERSION="24.04 LTS"
+ID=ubuntu
+If it is RHEL:
+NAME="Red Hat Enterprise Linux"
+VERSION="9.4"
+ID="rhel"
+If it is Rocky Linux:
+NAME="Rocky Linux"
+VERSION="9.5"
+ID="rocky"
+
+You can also use:
+
+hostnamectl
+
+Example:
+
+Operating System: Rocky Linux 9.5
+
+For package installation, the command depends on the OS:
+
+OS	Package Manager	Example
+Ubuntu/Debian	apt	sudo apt install -y vim
+RHEL/CentOS/Rocky	yum/dnf	sudo yum install -y vim-enhanced
+
+In your Stratos Datacenter KodeKloud labs, the storage servers are usually CentOS/RHEL-based, so:
+
+sudo yum install -y $PACKAGE
+
+is normally the correct command.
+
+Run:
+
+cat /etc/os-release
+
+on ststor01 and send the output if you want me to confirm the exact Jenkins command.
+
+[natasha@ststor01 ~]$ cat /etc/os-release
+NAME="CentOS Stream"
+VERSION="9"
+ID="centos"
+ID_LIKE="rhel fedora"
+VERSION_ID="9"
+PLATFORM_ID="platform:el9"
+PRETTY_NAME="CentOS Stream 9"
+ANSI_COLOR="0;31"
+LOGO="fedora-logo-icon"
+CPE_NAME="cpe:/o:centos:centos:9"
+HOME_URL="https://centos.org/"
+BUG_REPORT_URL="https://issues.redhat.com/"
+REDHAT_SUPPORT_PRODUCT="Red Hat Enterprise Linux 9"
+REDHAT_SUPPORT_PRODUCT_VERSION="CentOS Stream"
+[natasha@ststor01 ~]$  which command do i enter for this : sudo yum install -y $PACKAGE || sudo dnf install -y $PACKAGE
+
+If your storage server is Ubuntu instead of RHEL:
+
+sudo apt update
+sudo apt install -y $PACKAGE
+
+Your storage server is:
+
+CentOS Stream 9
+
+It is RHEL-based, so you should not use apt.
+
+For CentOS Stream 9, use either dnf or yum. Since CentOS 9 uses dnf underneath, the preferred command is:
+
+sudo dnf install -y $PACKAGE
+
+However, this command is also fine:
+
+sudo yum install -y $PACKAGE || sudo dnf install -y $PACKAGE
+
+Why?
+
+yum install -y $PACKAGE tries first.
+
+If yum fails, || runs:
+
+sudo dnf install -y $PACKAGE
+On CentOS Stream 9, yum is usually a compatibility link to dnf, so both work.
+
+For your Jenkins job, I recommend using the simpler:
+
+sudo dnf install -y $PACKAGE
+
+Then run your Jenkins build with:
+
+PACKAGE=vim-enhanced
+
+After it finishes, verify on ststor01:
+
+rpm -q vim-enhanced
+
+Expected output will look like:
+
+vim-enhanced-9.x.x.el9.x86_64
+
+One more thing: because Jenkins connects as natasha, make sure natasha has passwordless sudo. Test:
+
+sudo -n dnf install -y vim-enhanced
+
+If it returns a sudo password error, Jenkins will fail even with the correct SSH setup.
+
+[natasha@ststor01 ~]$ rpm -q vim-enhanced
+vim-enhanced-8.2.2637-33.el9.x86_64
+
+Great! ✅ This confirms that the package installation is successful on the storage server.
+
+Your output:
+
+vim-enhanced-8.2.2637-33.el9.x86_64
+
+means:
+
+Package name: vim-enhanced
+Version: 8.2.2637
+OS compatibility: el9 → Enterprise Linux 9 (CentOS Stream 9/RHEL 9 family)
+Architecture: x86_64
+Installation status: installed successfully
+
+Now your Jenkins job requirement is satisfied:
+
+✅ Jenkins job created: install-packages
+✅ String parameter created: PACKAGE
+✅ Jenkins connects to storage server (ststor01)
+✅ Package installation command works
+✅ vim-enhanced installed and verified
+
+For your final Jenkins job configuration, your SSH command should be:
+
+sudo dnf install -y $PACKAGE
+
+Run the Jenkins job once more using:
+
+PACKAGE=vim-enhanced
+
+and confirm the Jenkins console ends with:
+
+Finished: SUCCESS
+
+If it still shows UNSTABLE, the package is installed but the Jenkins SSH plugin may still be returning a non-zero exit code; in that case, share the latest console output.
+
+
+This Jenkins task represents a real-world DevOps automation scenario: instead of manually logging into servers and installing software, a team creates a Jenkins job that can install packages automatically and consistently.
+
+Real-world example
+
+Imagine a company has 50 Linux servers running applications. A security team discovers that all servers need a new package installed:
+
+vim-enhanced (example)
+a monitoring agent
+a security patch
+a database client
+a backup tool
+a new application dependency
+
+Without automation, an administrator would have to:
+
+SSH into every server.
+Run the installation command.
+Enter passwords.
+Verify installation.
+Repeat 50 times.
+
+This is slow and error-prone.
+
+With Jenkins automation:
+
+A DevOps engineer creates a Jenkins job:
+install-packages
+The job accepts a parameter:
+PACKAGE
+
+Example:
+
+PACKAGE=nodejs
+Jenkins connects to the required servers:
+ststor01
+app-server-01
+app-server-02
+Jenkins runs:
+sudo dnf install -y nodejs
+Jenkins reports success/failure.
+Common situations where this is used
+1. New server provisioning
+
+When a new server is created:
+
+Example:
+
+A company launches 20 AWS EC2 instances for a new application.
+
+The Jenkins job installs:
+
+nginx
+docker
+java-17
+python3
+git
+
+automatically.
+
+2. Security updates
+
+Security team says:
+
+"Install the latest OpenSSL package on all production servers."
+
+Instead of manually updating hundreds of servers, Jenkins runs:
+
+sudo dnf update openssl -y
+3. Developer environment setup
+
+A developer joins the company.
+
+A Jenkins job can prepare a server with:
+
+java
+maven
+nodejs
+docker
+kubectl
+terraform
+4. CI/CD pipeline dependency installation
+
+Suppose an application requires:
+
+java-17
+maven
+docker
+
+Before deployment, Jenkins ensures the deployment server has everything needed.
+
+Example pipeline:
+
+Developer pushes code
+          |
+          ↓
+      GitHub
+          |
+          ↓
+       Jenkins
+          |
+          ↓
+ Install dependencies
+          |
+          ↓
+ Build application
+          |
+          ↓
+ Deploy to servers
+5. Standardization across environments
+
+Companies usually have:
+
+Development servers
+Testing servers
+Staging servers
+Production servers
+
+Automation ensures all environments have the same packages.
+
+Example:
+
+Without automation:
+
+Production:
+Java 17 installed
+
+Testing:
+Java 11 installed
+
+Development:
+Java 21 installed
+
+This causes "works on my machine" problems.
+
+With Jenkins:
+
+install-packages
+PACKAGE=java-17
+
+Every server gets the same version.
+
+How this relates to your DevOps role
+
+This task combines several real DevOps skills:
+
+Skill	Real-world usage
+Jenkins	CI/CD automation
+SSH	Remote server management
+Linux packages	Server administration
+Parameters	Reusable automation
+Scripting	Infrastructure automation
+Permissions	Secure access management
+
+In larger companies, this type of task is often handled with tools like:
+
+Ansible
+Terraform
+AWS Systems Manager
+
+but Jenkins jobs like the one you created are still common for operational automation.
+
+So the lab is basically teaching you the foundation of "one button → configure many servers", which is a core DevOps practice.
