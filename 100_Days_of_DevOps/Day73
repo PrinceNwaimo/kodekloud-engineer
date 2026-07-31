@@ -1,0 +1,211 @@
+The devops team of xFusionCorp Industries is working on to setup centralised logging management system to maintain and analyse server logs easily. Since it will take some time to implement, they wanted to gather some server logs on a regular basis. At least one of the app servers is having issues with the Apache server. The team needs Apache logs so that they can identify and troubleshoot the issues easily if they arise. So they decided to create a Jenkins job to collect logs from the server. Please create/configure a Jenkins job as per details mentioned below:
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321
+1. Create a Jenkins jobs named copy-logs.
+2. Configure it to periodically build every 10 minutes to copy the Apache logs (both access_log and error_log) from App Server 3 (stapp03) from the default logs location to location /usr/src/itadmin on the Storage Server.
+3. Build the job at least once so that the logs are copied and can be verified.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins. We recommend selecting Restart Jenkins when installation is complete and no jobs are running in the update centre. Refresh the page if the UI gets stuck after a restart.
+2. Define the cron expression as required (e.g. */10 * * * * to run every 10 minutes).
+3. For scenarios that require web UI changes, take screenshots or record your work (e.g. using loom.com) so you can share it for review if the task is marked incomplete.
+
+
+
+
+SOLUTION
+
+This is a typical KodeKloud Jenkins lab. Since Jenkins needs to copy files from one remote server (stapp01) to another remote server (Storage Server), the easiest solution is to use SSH in a Jenkins freestyle job.
+
+Step 1: Log in to Jenkins
+Click Jenkins
+Username: admin
+Password: Adm!n321
+Step 2: Install Required Plugin (if missing)
+
+Go to
+
+Manage Jenkins → Plugins → Available Plugins
+
+Install:
+
+SSH Agent Plugin 
+and 
+Publish Over SSH
+
+(or if the lab specifically requires it, install Publish Over SSH.)
+
+Restart Jenkins if prompted.
+
+In these KodeKloud/Stratos Jenkins labs, Configure SSH servers means telling Jenkins how to connect to the remote servers. Here's how to do it.
+
+1. Open the SSH configuration
+
+In Jenkins:
+
+Manage Jenkins
+System
+Scroll down to Publish over SSH
+
+If you don't see Publish over SSH, install the Publish Over SSH plugin first and restart Jenkins.
+
+2. Configure the SSH Key
+
+In the Publish over SSH section:
+
+Check Disable exec: No (leave unchecked)
+In Key, paste the private SSH key that Jenkins should use.
+
+If the lab has already generated a key, you can usually find it on the Jenkins server:
+
+sudo cat /var/lib/jenkins/.ssh/id_rsa
+
+Copy the entire contents, including:
+
+-----BEGIN OPENSSH PRIVATE KEY-----
+...
+-----END OPENSSH PRIVATE KEY-----
+
+Paste it into the Key field.
+
+3. Add the App Server
+
+Click Add under SSH Servers.
+
+Fill in:
+
+Name: stapp03
+Hostname: stapp03
+Username: tony (or whatever user your lab specifies)
+Remote Directory: leave blank
+
+Click Test Configuration.
+
+If it succeeds, save it.
+
+4. Add the Storage Server
+
+Click Add again.
+
+Fill in:
+
+Name: ststor01
+Hostname: ststor01
+Username: natasha (or the lab's storage user)
+Remote Directory: /usr/src/itadmin
+
+Click Test Configuration.
+verify the directory and permissions in storage server
+SSH into the storage server:
+
+ssh natasha@ststor01
+
+(or your storage server username)
+
+Then run:
+
+ls -ld /usr/src/itadmin
+
+You will probably see one of these situations:
+
+Case 1: Directory does not exist
+
+Example:
+
+ls: cannot access '/usr/src/itadmin': No such file or directory
+
+Create it:
+
+sudo mkdir -p /usr/src/itadmin
+sudo chmod 777 /usr/src/itadmin
+Case 2: Directory exists but permissions are wrong
+
+Example:
+
+drwx------ root root /usr/src/itadmin
+
+Fix permissions:
+
+sudo chmod 777 /usr/src/itadmin
+
+or change ownership:
+
+sudo chown natasha:natasha /usr/src/itadmin
+Configure Jenkins SSH key access
+1. Become the Jenkins user
+
+On the Jenkins server:
+
+sudo su - jenkins
+
+Create the SSH directory:
+
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+2. Generate an SSH key
+
+Run:
+
+ssh-keygen -t rsa -b 4096
+
+Press Enter for all prompts:
+
+Enter file in which to save the key:
+
+Press Enter.
+
+Enter passphrase:
+
+Press Enter (empty).
+
+3. Copy the key to stapp01
+
+Run:
+
+ssh-copy-id tony@stapp01
+
+Enter the tony password when prompted.
+
+You should see:
+
+Number of key(s) added: 1
+4. Copy the key to the storage server
+
+Run:
+
+ssh-copy-id natasha@ststor01
+
+Enter the storage password.
+
+5. Test passwordless SSH
+
+Still as the Jenkins user:
+
+ssh tony@stapp01
+
+It should enter directly without asking for a password.
+
+Then:
+
+ssh natasha@ststor01
+
+should also work without a password.
+Create a Freestyle project named:
+copy-logs
+Under Build Triggers, check Build periodically and use:
+*/11 * * * *
+Under Build → Execute shell, use:
+#!/bin/bash
+
+# Copy Apache logs to /tmp on App Server 3
+ssh -o StrictHostKeyChecking=no tony@stapp03 "sudo cp /var/log/httpd/access_log /tmp/access_log && sudo cp /var/log/httpd/error_log /tmp/error_log && sudo chmod 644 /tmp/access_log /tmp/error_log"
+
+# Copy logs from App Server 3 to Jenkins
+scp -o StrictHostKeyChecking=no tony@stapp03:/tmp/access_log /tmp/
+scp -o StrictHostKeyChecking=no tony@stapp03:/tmp/error_log /tmp/
+
+# Copy logs from Jenkins to the Storage Server
+scp -o StrictHostKeyChecking=no /tmp/access_log natasha@ststor01:/usr/src/itadmin/
+scp -o StrictHostKeyChecking=no /tmp/error_log natasha@ststor01:/usr/src/itadmin/
+
+
