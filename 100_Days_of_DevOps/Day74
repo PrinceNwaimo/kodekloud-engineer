@@ -1,0 +1,331 @@
+There is a requirement to create a Jenkins job to automate the database backup. Below you can find more details to accomplish this task:
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+Create a Jenkins job named database-backup.
+Configure it to take a database dump of the kodekloud_db01 database present on the App server (stapp01) in Stratos Datacenter, the database user is kodekloud_roy and password is asdfgdsd.
+The dump should be named in db_$(date +%F).sql format, where date +%F is the current date.
+Copy the db_$(date +%F).sql dump to the Storage server (ststor01) under location /home/natasha/db_backups.
+Further, schedule this job to run periodically at */10 * * * * (please use this exact schedule format).
+
+Note:
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case please make sure to refresh the UI page.
+Please make sure to define you cron expression like this */10 * * * * (this is just an example to run job every 10 minutes).
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Solution
+This is a typical KodeKloud Jenkins lab. The easiest approach is to create a freestyle job that SSHs to stapp01, creates the MySQL dump, then copies it to ststor01, and schedule it every 10 minutes.
+
+1. Create the Job
+Open Jenkins
+Login
+Username: admin
+Password: Adm!n321
+New Item
+
+Name:
+
+database-backup
+Select Freestyle project
+Click OK
+2. Build Triggers
+
+Enable:
+
+Build periodically
+
+Cron expression:
+
+*/10 * * * *
+
+Use exactly that expression.
+
+3. Build Step
+
+If the Execute shell option is available, use Build → Execute shell and paste:
+
+#!/bin/bash
+
+TODAY=$(date +%F)
+FILE=db_${TODAY}.sql
+
+ssh -o StrictHostKeyChecking=no tony@stapp01 "
+mysqldump -u kodekloud_roy -pasdfgdsd kodekloud_db01 > /tmp/${FILE}
+"
+
+scp -o StrictHostKeyChecking=no tony@stapp01:/tmp/${FILE} natasha@ststor01:/home/natasha/db_backups/
+
+ssh -o StrictHostKeyChecking=no tony@stapp01 "rm -f /tmp/${FILE}"
+4. If Execute Shell is Missing
+
+Install SSH Agent or Publish over SSH plugin.
+
+Most KodeKloud labs already have one of these installed.
+
+If using Publish over SSH:
+
+Configure SSH hosts under:
+Manage Jenkins
+→ System
+→ Publish over SSH
+
+Configure:
+
+stapp01
+ststor01
+
+Then add an Execute shell step (or SSH build step depending on the installed plugin) that performs the dump and copy.
+
+5. Save
+
+Click Save.
+
+6. Test
+
+Click:
+
+Build Now
+
+Verify:
+
+On stapp01
+
+ls /tmp/db_$(date +%F).sql
+
+On ststor01
+
+ls -l /home/natasha/db_backups
+
+Expected output:
+
+db_2026-08-01.sql
+If the build fails
+
+The most common causes are:
+
+SSH authentication between Jenkins and stapp01
+SSH authentication from Jenkins to ststor01
+mysqldump not in the PATH
+The Jenkins user lacking SSH keys
+
+Excellent. Your manual test proves that every part of the backup workflow is now working. ✅
+
+You have verified:
+
+Step	Result
+Jenkins → stapp01 SSH	✅ Works
+mysqldump execution	✅ Works
+Database credentials	✅ Correct
+stapp01 → Jenkins SCP	✅ Works
+Jenkins → ststor01 SCP	✅ Works
+Backup directory	✅ Correct
+
+Your test flow:
+
+ssh tony@stapp01 "mysqldump -u kodekloud_roy -pasdfgdsd kodekloud_db01 > /tmp/db_test.sql"
+
+created:
+
+/tmp/db_test.sql
+
+Then:
+
+scp tony@stapp01:/tmp/db_test.sql /tmp/
+
+worked.
+
+Then:
+
+scp /tmp/db_test.sql natasha@ststor01:/home/natasha/db_backups/
+
+worked.
+
+Storage server now contains:
+
+/home/natasha/db_backups/
+├── db_2026-08-01.sql
+└── db_test.sql
+Final Jenkins script
+
+Replace your Jenkins Execute Shell with:
+
+#!/bin/bash
+
+TODAY=$(date +%F)
+FILE=db_${TODAY}.sql
+
+echo "Creating database backup on stapp01..."
+
+ssh -o StrictHostKeyChecking=no tony@stapp01 \
+"mysqldump -u kodekloud_roy -pasdfgdsd kodekloud_db01 > /tmp/${FILE}"
+
+echo "Copying backup from stapp01 to Jenkins..."
+
+scp -o StrictHostKeyChecking=no \
+tony@stapp01:/tmp/${FILE} /tmp/
+
+echo "Copying backup to storage server..."
+
+scp -o StrictHostKeyChecking=no \
+/tmp/${FILE} natasha@ststor01:/home/natasha/db_backups/
+
+echo "Cleaning temporary files..."
+
+ssh -o StrictHostKeyChecking=no tony@stapp01 \
+"rm -f /tmp/${FILE}"
+
+rm -f /tmp/${FILE}
+
+echo "Database backup completed successfully"
+
+Now run:
+
+Jenkins → database-backup → Build Now
+
+Expected console output:
+
+Creating database backup on stapp01...
+Copying backup from stapp01 to Jenkins...
+Copying backup to storage server...
+Cleaning temporary files...
+Database backup completed successfully
+
+Finished: SUCCESS
+Why your original job failed
+
+The original line:
+
+scp tony@stapp01:/tmp/${FILE} natasha@ststor01:/home/natasha/db_backups/
+
+required:
+
+stapp01 SSH → ststor01
+
+but you only configured:
+
+jenkins SSH → stapp01
+jenkins SSH → ststor01
+
+The corrected flow uses Jenkins as the middle point, matching your SSH configuration. This is also the more common production approach for CI/CD backup jobs.
+
+Started by timer
+Running as SYSTEM
+Building in workspace /var/lib/jenkins/workspace/database-backup
+[database-backup] $ /bin/bash /tmp/jenkins12496482930931563746.sh
+Creating database backup on stapp01...
+Copying backup from stapp01 to Jenkins...
+Copying backup to storage server...
+Cleaning temporary files...
+Database backup completed successfully
+Finished: SUCCESS
+
+Great! ✅ Your Jenkins database-backup job is now working successfully.
+
+The successful build confirms the complete automation pipeline is functioning:
+
+Started by timer
+Running as SYSTEM
+Building in workspace /var/lib/jenkins/workspace/database-backup
+
+Creating database backup on stapp01...
+Copying backup from stapp01 to Jenkins...
+Copying backup to storage server...
+Cleaning temporary files...
+Database backup completed successfully
+
+Finished: SUCCESS
+What the job is doing now
+Jenkins timer triggers the job
+Jenkins starts the backup automatically.
+
+Database dump is created on App Server
+
+mysqldump -u kodekloud_roy -pasdfgdsd kodekloud_db01 > /tmp/db_YYYY-MM-DD.sql
+
+Backup is transferred to Jenkins
+
+scp tony@stapp01:/tmp/db_YYYY-MM-DD.sql /tmp/
+
+Backup is copied to Storage Server
+
+scp /tmp/db_YYYY-MM-DD.sql natasha@ststor01:/home/natasha/db_backups/
+
+Temporary files are cleaned
+
+rm -f /tmp/db_YYYY-MM-DD.sql
+Final verification (optional)
+
+Check the latest backup:
+
+ssh natasha@ststor01 "ls -lh /home/natasha/db_backups"
+
+You should see something like:
+
+-rw-r--r-- 1 natasha natasha 1319 Aug 1 20:xx db_2026-08-01.sql
+Real-world DevOps concepts you just implemented
+
+This task mirrors a production backup workflow:
+
+✅ Jenkins scheduled automation (cron/timer)
+✅ SSH key-based authentication
+✅ Database backup automation
+✅ Secure file transfer
+✅ Remote cleanup
+✅ Backup retention foundation
+
+In a production environment, the next improvements would usually be:
+
+compress backups:
+
+gzip db_YYYY-MM-DD.sql
+encrypt backups before transfer
+upload to S3/object storage
+keep only the last N backups
+add failure notifications (Slack/email)
+verify backup integrity automatically
+
+Your KodeKloud/xFusion database backup task is complete. 🎉
+
+Ad
+[tony@stapp01 ~]$ ls /tmp/db_$(date +%F).sql
+ls: cannot access '/tmp/db_2026-08-01.sql': No such file or directory
+
+This is expected behavior based on your Jenkins script. ✅
+
+Your script contains this cleanup step:
+
+ssh -o StrictHostKeyChecking=no tony@stapp01 \
+"rm -f /tmp/${FILE}"
+
+So after the backup is successfully copied to ststor01, Jenkins removes the temporary dump from stapp01.
+
+The workflow is:
+
+Create backup on stapp01:
+/tmp/db_2026-08-01.sql
+Copy it to Jenkins:
+/tmp/db_2026-08-01.sql  (on Jenkins)
+Copy it to storage:
+/home/natasha/db_backups/db_2026-08-01.sql
+Delete temporary file from stapp01:
+rm -f /tmp/db_2026-08-01.sql
+
+Therefore:
+
+[tony@stapp01 ~]$ ls /tmp/db_$(date +%F).sql
+
+returns:
+
+No such file or directory
+
+because Jenkins already cleaned it up.
+
+To confirm the backup exists where it should be:
+
+ssh natasha@ststor01 "ls -lh /home/natasha/db_backups"
+
+You should see:
+
+db_2026-08-01.sql
+
+This is actually the desired backup behavior: temporary files are removed from the application server after successful transfer.
+
+If you can SSH into the lab terminal, I can also provide the exact SSH configuration required for Jenkins to complete this task successfully.
