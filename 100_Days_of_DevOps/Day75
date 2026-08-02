@@ -1,0 +1,259 @@
+The Nautilus DevOps team has installed and configured new Jenkins server in Stratos DC which they will use for CI/CD and for some automation tasks. There is a requirement to add all app servers as slave nodes in Jenkins so that they can perform tasks on these servers using Jenkins. Find below more details and accomplish the task accordingly.
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+1. Add all app servers as SSH build agent/slave nodes in Jenkins. Slave node name for app server 1, app server 2 and app server 3 must be App_server_1, App_server_2, App_server_3 respectively.
+2. Add labels as below:
+
+App_server_1 : stapp01
+App_server_2 : stapp02
+App_server_3 : stapp03
+3. Remote root directory for App_server_1 must be /home/tony/jenkins, for App_server_2 must be /home/steve/jenkins and for App_server_3 must be /home/banner/jenkins.
+4. Make sure slave nodes are online and working properly.
+Note:
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+2. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+SOLUTION
+To complete this KodeKloud Jenkins task, follow these steps.
+
+Step 1: Verify Jenkins Plugins
+
+Log in to Jenkins:
+
+URL: http://<jenkins-server>:8080
+Username: admin
+Password: Adm!n321
+
+Go to:
+
+Manage Jenkins
+→ Plugins
+
+Ensure the following plugin is installed:
+
+SSH Build Agents (or SSH Agent depending on the Jenkins version)
+
+If you install it:
+
+Click Restart Jenkins when installation is complete and no jobs are running.
+Wait for Jenkins to restart.
+Refresh the browser.
+Step 2: Add SSH Credentials
+
+Go to:
+
+Manage Jenkins
+→ Credentials
+→ System
+→ Global credentials
+→ Add Credentials
+
+You need SSH credentials for each app server.
+
+Usually in KodeKloud labs:
+
+Server	Username
+stapp01	tony
+stapp02	steve
+stapp03	banner
+
+If SSH keys already exist on the Jenkins server, use SSH Username with private key.
+
+If password authentication is used, choose:
+
+Kind:
+Username with password
+
+Example:
+
+ID: tony
+Username: tony
+Password: <password>
+
+Repeat for:
+
+steve
+banner
+
+If you don't know the passwords, retrieve them from the jump host:
+
+cat ~/passwords.txt
+
+or
+
+sudo cat /root/passwords.txt
+
+(depending on the lab).
+
+Step 3: Create App_server_1
+
+Go to
+
+Manage Jenkins
+→ Nodes
+→ New Node
+
+Name:
+
+App_server_1
+
+Choose
+
+Permanent Agent
+
+Configure exactly:
+
+Number of executors
+
+1
+
+Remote root directory
+
+/home/tony/jenkins
+
+Labels
+
+stapp01
+
+Usage
+
+Use this node as much as possible
+
+Launch method
+
+Launch agents via SSH
+
+Host:
+
+stapp01
+
+Credentials:
+
+tony
+
+Host Key Verification Strategy
+
+Non verifying Verification Strategy
+
+Click Save.
+
+Step 4: Create App_server_2
+
+Name
+
+App_server_2
+
+Remote root
+
+/home/steve/jenkins
+
+Label
+
+stapp02
+
+Host
+
+stapp02
+
+Credentials
+
+steve
+
+Launch via SSH
+
+Host verification
+
+Non verifying Verification Strategy
+
+Save.
+
+Step 5: Create App_server_3
+
+Name
+
+App_server_3
+
+Remote root
+
+/home/banner/jenkins
+
+Label
+
+stapp03
+
+Host
+
+stapp03
+
+Credentials
+
+banner
+
+Launch via SSH
+
+Host verification
+
+Non verifying Verification Strategy
+
+Save.
+
+Step 6: Verify Agents
+
+Go to
+
+Manage Jenkins
+→ Nodes
+
+You should see
+
+App_server_1
+App_server_2
+App_server_3
+
+All should display
+
+Online
+
+Click each node and check the log. A successful connection typically includes messages like:
+
+SSHLauncher{host='stapp01'}
+Connected
+Java version ...
+Agent successfully connected and online
+If an Agent Fails
+
+From the Jenkins server, test SSH manually.
+
+For App Server 1:
+
+ssh tony@stapp01
+
+App Server 2:
+
+ssh steve@stapp02
+
+App Server 3:
+
+ssh banner@stapp03
+
+Also verify Java is installed on each app server:
+
+java -version
+
+If Java is missing:
+
+sudo yum install java-17-openjdk -y
+
+or on Ubuntu:
+
+sudo apt install openjdk-17-jre -y
+Final Configuration Summary
+Node Name	Label	Remote Root	Host
+App_server_1	stapp01	/home/tony/jenkins	stapp01
+App_server_2	stapp02	/home/steve/jenkins	stapp02
+App_server_3	stapp03	/home/banner/jenkins	stapp03
+
+If you encounter authentication errors or agents remain offline, share:
+
+the Jenkins agent log,
+the output of ssh tony@stapp01 (or the relevant server),
+and the java -version output from the app server, and I can help diagnose the issue.
