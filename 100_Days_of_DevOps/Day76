@@ -1,0 +1,191 @@
+The xFusionCorp Industries has recruited some new developers. There are already some existing jobs on Jenkins and two of these new developers need permissions to access those jobs. The development team has already shared those requirements with the DevOps team, so as per details mentioned below grant required permissions to the developers.
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+There is an existing Jenkins job named Packages, there are also two existing Jenkins users named sam with password sam@pass12345 and rohan with password rohan@pass12345.
+Grant permissions to these users to access Packages job as per details mentioned below:
+
+a.) Make sure to select Inherit permissions from parent ACL under inheritance strategy for granting permissions to these users.
+b.) Grant mentioned permissions to sam user : build, configure and read.
+c.) Grant mentioned permissions to rohan user : build, cancel, configure, read, update and tag.
+
+Note:
+
+Please do not modify/alter any other existing job configuration.
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+SOLUTION
+This task is done entirely in the Jenkins UI.
+
+1. Log in to Jenkins
+Open the Jenkins link from the top bar.
+Username: admin
+Password: Adm!n321
+2. Install the required plugin (if Job permissions are unavailable)
+
+If you don't see Enable project-based security or Matrix-based security under the job configuration:
+
+Go to Manage Jenkins → Plugins (or Manage Plugins).
+Install Role-based Authorization Strategy only if specifically needed by your Jenkins version. More commonly for this task, ensure the Matrix Authorization Strategy plugin is installed.
+Restart Jenkins when prompted.
+Refresh the browser after Jenkins comes back online.
+3. Configure the Packages job
+Open Packages job.
+Click Configure.
+Scroll to General.
+Enable:
+Enable project-based security
+Under Inheritance Strategy, select:
+✅ Inherit permissions from parent ACL
+4. Add user sam
+
+Click Add User, enter:
+
+sam
+
+Grant only these permissions:
+
+✅ Read
+✅ Build
+✅ Configure
+
+Leave every other permission unchecked.
+
+5. Add user rohan
+
+Click Add User, enter:
+
+rohan
+
+Grant only these permissions:
+
+✅ Read
+✅ Build
+✅ Cancel
+✅ Configure
+✅ Update
+✅ Tag
+
+Leave every other permission unchecked.
+
+6. Save
+
+Click Save.
+
+Final permissions should be
+User	Permissions
+sam	Read, Build, Configure
+rohan	Read, Build, Cancel, Configure, Update, Tag
+Screenshots to capture
+
+If this is a KodeKloud task, take screenshots of:
+
+Packages → Configure → Project-based Security showing:
+Inherit permissions from parent ACL selected.
+The permissions table showing:
+sam with Build, Configure, Read
+rohan with Build, Cancel, Configure, Read, Update, Tag
+
+Do not modify any other job settings before clicking Save.
+
+Enable:
+Enable project-based security
+Under Inheritance Strategy, select:
+✅ Inherit permissions from parent ACL I can't find these
+
+That's expected on some Jenkins versions. The options Enable project-based security and Inherit permissions from parent ACL only appear when the required authorization plugin is installed.
+
+First, check which authorization strategy you're using:
+
+Go to Manage Jenkins → Security (or Configure Global Security on older versions).
+Tell me what you see under Authorization. For example, is it:
+Matrix-based security
+Project-based Matrix Authorization Strategy
+Role-Based Strategy
+Logged-in users can do anything
+Something else
+
+Also check the Packages job:
+
+Open Packages → Configure.
+Scroll through the page. Do you see:
+Enable project-based security
+Authorization
+Project-based Matrix Authorization
+None of these
+
+Finally, go to Manage Jenkins → Plugins → Installed and search for matrix. Let me know whether you have Matrix Authorization Strategy installed.
+
+If possible, paste the output of:
+
+the Authorization section from Manage Jenkins → Security, or
+a screenshot of the Packages → Configure page around the General section.
+
+That will identify exactly what's missing.
+
+Tell me what you see under Authorization. For example, is it:
+
+Matrix-based security
+Project-based Matrix Authorization Strategy
+Role-Based Strategy
+Logged-in users can do anything
+Something else  Yeah I can see them
+
+Great—that means the required authorization strategy is available.
+
+Now do the following:
+
+Go to Packages → Configure.
+Scroll through the configuration page.
+
+If you don't see Enable project-based security, it's usually because Project-based Matrix Authorization Strategy is not enabled globally.
+
+Check the global authorization strategy
+Go to Manage Jenkins → Security (or Configure Global Security).
+Under Authorization, select:
+✅ Project-based Matrix Authorization Strategy
+Click Save.
+Then go back
+Open Packages → Configure again.
+You should now see:
+✅ Enable project-based security
+Check it.
+Under Inheritance Strategy, choose:
+✅ Inherit permissions from parent ACL
+Add the users and assign:
+sam: Read, Build, Configure
+rohan: Read, Build, Cancel, Configure, Read, Update, Tag
+If you still don't see it
+
+Tell me:
+
+What version of Jenkins are you running?
+Is Project-based Matrix Authorization Strategy currently selected under Manage Jenkins → Security → Authorization?
+
+Or upload a screenshot of:
+
+Manage Jenkins → Security → Authorization, and
+the top part of Packages → Configure.
+
+I can tell you exactly what to change.
+This task is a simplified version of a very common responsibility for DevOps engineers: implementing least-privilege access control in CI/CD systems.
+
+In the real world, you rarely want every developer to have full administrative access to Jenkins. Instead, you grant only the permissions they need to do their job.
+
+For example:
+
+Junior developer (sam): Can view a job, modify its build configuration, and start builds, but cannot delete the job or manage permissions.
+Senior developer or release engineer (rohan): May also be allowed to stop running builds, update job metadata, and tag builds, while still not being a Jenkins administrator.
+
+This approach provides several benefits:
+
+Security: Prevents unauthorized changes to critical pipelines.
+Compliance: Helps satisfy standards such as ISO 27001, SOC 2, or PCI DSS by enforcing least privilege.
+Operational stability: Reduces the risk of accidental deletion or misconfiguration of production pipelines.
+Auditability: Makes it clear who is allowed to perform which actions.
+A practical example
+
+Suppose your company has three Jenkins pipelines:
+
+Payments-Production
+Payments-Staging
+Payments-Development
