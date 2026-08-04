@@ -1,0 +1,36 @@
+Problem
+Create PR to merge story/fox-and-grapes into master, assign Tom as reviewer, review and merge as Tom.
+
+Solution
+Gitea UI Steps:
+
+SSH as max to check repo:
+
+bash
+ssh max@<storage-server-ip>
+cd ~/<repo>
+git log --oneline --graph --decorate
+git branch -r | grep story/fox-and-grapes
+As max user:
+
+Login to Gitea (max/Max_pass123)
+
+Open repository
+
+Pull Requests → New Pull Request
+
+Source: story/fox-and-grapes → Target: master
+
+Title: "Added fox-and-grapes story"
+
+Create PR
+
+Add reviewer: tom
+
+As tom user:
+
+Login to Gitea (tom/Tom_pass123)
+
+Open PR → Review → Approve
+
+Merge Pull Request
