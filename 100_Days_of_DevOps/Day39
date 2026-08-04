@@ -1,0 +1,14 @@
+Create Image from Container on App Server 1
+Problem: Create an image games:devops on Application Server 1 from a container ubuntu_latest that is running on same server.
+
+Solution:
+
+bash
+# Create image from container
+docker commit ubuntu_latest games:devops
+
+# Verify
+docker images | grep games
+
+# Test the new image
+docker run -it games:devops bash
