@@ -1,0 +1,43 @@
+Docker Compose Finance on App Server 1
+Problem: On App Server 1 create a docker compose file /opt/finance/docker-compose.yml with web (php) and DB (mariadb) services.
+
+Solution:
+
+bash
+# Create directory
+sudo mkdir -p /opt/finance
+cd /opt/finance
+
+# Create docker-compose.yml
+sudo vi /opt/finance/docker-compose.yml
+docker-compose.yml content:
+
+yaml
+services:
+  web:
+    image: php:apache
+    container_name: php_host
+    ports:
+      - "3001:80"
+    volumes:
+      - /var/www/html:/var/www/html
+
+  db:
+    image: mariadb:latest
+    container_name: mysql_host
+    ports:
+      - "3306:3306"
+    volumes:
+      - /var/lib/mysql:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: database_host
+      MYSQL_USER: finance_user
+      MYSQL_PASSWORD: Str0ngP@ssw0rd!
+      MYSQL_ROOT_PASSWORD: R00tP@ssw0rd!
+bash
+# Start the stack
+sudo docker compose up -d
+
+# Verify
+sudo docker ps
+curl http://localhost:3001/
