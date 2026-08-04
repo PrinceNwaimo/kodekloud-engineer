@@ -1,0 +1,19 @@
+Problem
+Create EC2 instance datacenter-ec2 and CloudWatch alarm for CPU > 90%.
+
+Solution
+Portal Steps:
+
+Launch EC2 datacenter-ec2 (Ubuntu 22.04, t3.micro)
+
+Create CloudWatch Alarm datacenter-alarm:
+
+Metric: EC2 → CPUUtilization
+
+Statistic: Average
+
+Period: 5 minutes
+
+Condition: >= 90% for 1 consecutive period
+
+Notification: datacenter-sns-topic
