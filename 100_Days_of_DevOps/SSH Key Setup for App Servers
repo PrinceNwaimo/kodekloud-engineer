@@ -1,0 +1,17 @@
+Problem
+Set up password-less SSH authentication from thor user on jump host to all app servers through their respective sudo users.
+
+Solution
+bash
+# On jump host as thor user
+ssh-keygen -t rsa -b 2048
+
+# Copy public key to each app server
+ssh-copy-id tony@app1
+ssh-copy-id tony@app2
+ssh-copy-id steve@app3
+
+# Test password-less access
+ssh tony@app1
+ssh tony@app2
+ssh steve@app3
