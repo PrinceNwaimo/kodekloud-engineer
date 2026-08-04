@@ -1,0 +1,23 @@
+Problem
+Create a bash script named official_backup.sh to zip the /var/www/html/official directory and copy it to the Nautilus Storage Server.
+
+Solution
+bash
+#!/bin/bash
+# /scripts/official_backup.sh
+
+# Create zip archive
+zip -r /backup/xfusioncorp_official.zip /var/www/html/official
+
+# Copy to Nautilus Storage Server
+scp /backup/xfusioncorp_official.zip storage-server-user@storage-server-ip:/backup/
+Setup Commands:
+
+bash
+# On App Server 1
+sudo yum install zip
+ssh-keygen -t rsa
+ssh-copy-id storage-server-user@storage-server-ip
+mkdir -p /scripts
+chmod +x /scripts/official_backup.sh
+./scripts/official_backup.sh
