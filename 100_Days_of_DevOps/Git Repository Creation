@@ -1,0 +1,12 @@
+Problem
+Create a bare repository named /opt/apps.git on the Storage Server.
+
+Solution
+bash
+# On Storage Server
+sudo yum install git -y
+sudo mkdir -p /opt
+sudo git init --bare /opt/apps.git
+
+# Verify
+sudo ls -la /opt/apps.git/
