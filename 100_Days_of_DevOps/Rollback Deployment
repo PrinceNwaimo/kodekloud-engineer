@@ -1,0 +1,16 @@
+Problem: Initiate a rollback to the previous revision for nginx-deployment.
+
+Solution:
+
+bash
+# Check revision history
+kubectl rollout history deployment/nginx-deployment
+
+# Roll back to previous revision
+kubectl rollout undo deployment/nginx-deployment
+
+# Watch rollback
+kubectl rollout status deployment/nginx-deployment
+
+# Verify the image
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[0].image}'
