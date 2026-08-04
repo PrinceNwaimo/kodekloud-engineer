@@ -1,0 +1,23 @@
+Problem
+Install MariaDB, create database kodekloud_db6, user kodekloud_top with password YchZHRcLkL, and grant full permissions.
+
+Solution
+bash
+# Install MariaDB
+sudo yum install mariadb-server -y
+sudo systemctl enable --now mariadb
+
+# Secure installation
+sudo mysql_secure_installation
+
+# Login and create
+sudo mysql -u root -p
+
+CREATE DATABASE kodekloud_db6;
+CREATE USER 'kodekloud_top'@'localhost' IDENTIFIED BY 'YchZHRcLkL';
+GRANT ALL PRIVILEGES ON kodekloud_db6.* TO 'kodekloud_top'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+
+# Verify
+mysql -u kodekloud_top -pYchZHRcLkL kodekloud_db6 -e "SELECT DATABASE();"
