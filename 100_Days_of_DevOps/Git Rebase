@@ -1,0 +1,16 @@
+Problem
+Rebase feature branch onto master without losing data and without merge commit.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos
+git fetch origin
+git checkout feature-branch
+git rebase origin/master
+
+# If conflicts occur
+# Fix files, then:
+git add <fixed-files>
+git rebase --continue
+
+git push origin feature-branch --force-with-lease
