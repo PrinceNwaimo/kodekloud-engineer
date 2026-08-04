@@ -1,0 +1,16 @@
+Problem
+Create branch xfusion in /usr/src/kodekloudrepos/official, copy index.html, commit, merge to master, push both branches.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/official
+git checkout master
+git pull origin master
+git checkout -b xfusion
+cp /tmp/index.html .
+git add index.html
+git commit -m "Add index.html from /tmp to xfusion branch"
+git checkout master
+git merge xfusion
+git push origin master
+git push origin xfusion
