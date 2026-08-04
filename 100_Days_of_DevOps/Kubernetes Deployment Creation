@@ -1,0 +1,33 @@
+Problem: Create a deployment named httpd to deploy the application httpd using the image httpd:latest.
+
+Solution:
+
+bash
+# Create deployment
+kubectl create deployment httpd --image=httpd:latest
+
+# Verify
+kubectl get deployments
+kubectl get pods
+Alternative with YAML:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+      - name: httpd
+        image: httpd:latest
+        ports:
+        - containerPort: 80
