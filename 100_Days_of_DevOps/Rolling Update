@@ -1,0 +1,16 @@
+Problem: Execute a rolling update for nginx-deployment integrating the nginx:1.18 image. Ensure all pods are operational.
+
+Solution:
+
+bash
+# Get the container name
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[*].name}'
+
+# Update the image
+kubectl set image deployment/nginx-deployment nginx-container=nginx:1.18
+
+# Watch rollout
+kubectl rollout status deployment/nginx-deployment
+
+# Verify
+kubectl get pods -l app=nginx
