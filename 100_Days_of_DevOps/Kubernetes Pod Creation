@@ -1,0 +1,23 @@
+ Kubernetes Pod Creation
+Problem: Create a pod named pod-httpd using the httpd:latest image with app label httpd_app, container name httpd-container.
+
+Solution:
+
+pod-httpd.yaml:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-httpd
+  labels:
+    app: httpd_app
+spec:
+  containers:
+    - name: httpd-container
+      image: httpd:latest
+      ports:
+        - containerPort: 80
+bash
+kubectl apply -f pod-httpd.yaml
+kubectl get pods
