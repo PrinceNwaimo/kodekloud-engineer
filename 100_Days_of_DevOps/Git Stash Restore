@@ -1,0 +1,11 @@
+Problem
+Restore stash stash@{1} in /usr/src/kodekloudrepos/news, commit and push changes.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/news
+git stash list  # Verify stash@{1} exists
+git stash apply stash@{1}
+git add .
+git commit -m "Restored stashed changes"
+git push origin master
