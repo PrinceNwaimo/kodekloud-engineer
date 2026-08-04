@@ -1,0 +1,30 @@
+Docker Compose HTTPD on App Server 1
+Problem: On App Server 1 create a container named httpd using a docker compose file /opt/docker/docker-compose.yml. Use httpd image, map port 80 to 3001, map /usr/local/apache2/htdocs to /opt/security.
+
+Solution:
+
+bash
+# Create directory
+sudo mkdir -p /opt/docker
+cd /opt/docker
+
+# Create docker-compose.yml
+sudo vi /opt/docker/docker-compose.yml
+docker-compose.yml content:
+
+yaml
+services:
+  httpd-service:
+    image: httpd:latest
+    container_name: httpd
+    ports:
+      - "3001:80"
+    volumes:
+      - /opt/security:/usr/local/apache2/htdocs
+bash
+# Start the container
+sudo docker compose up -d
+
+# Verify
+sudo docker ps
+curl http://localhost:3001
