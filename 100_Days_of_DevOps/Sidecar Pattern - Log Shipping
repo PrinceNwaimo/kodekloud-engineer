@@ -1,0 +1,39 @@
+Problem: Create a pod named webserver with nginx container and a sidecar container to ship logs using shared emptyDir volume.
+
+Solution:
+
+webserver.yaml:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webserver
+spec:
+  volumes:
+    - name: shared-logs
+      emptyDir: {}
+  containers:
+    - name: nginx-container
+      image: nginx:latest
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+    - name: sidecar-container
+      image: ubuntu:latest
+      command:
+        - sh
+        - -c
+        - while true; do cat /var/log/nginx/access.log /var/log/nginx/error.log 2>/dev/null || true; sleep 30; done
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+bash
+kubectl apply -f webserver.yaml
+kubectl get pod webserver
+
+# Test sidecar logs
+kubectl logs webserver -c sidecar-container --tail=5
+
+# Generate test log
+kubectl exec webserver -c nginx-container -- echo "test log" > /var/log/nginx/access.log
