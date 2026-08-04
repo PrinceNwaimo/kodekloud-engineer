@@ -1,0 +1,27 @@
+Problem
+Create Azure VM named nautilus-vm with static public IP nautilus-pip.
+
+Solution
+Portal Steps:
+
+Generate SSH key on azure-client:
+
+bash
+ssh-keygen -t rsa -b 2048 -f ~/.ssh/azure_vm_key -N ""
+cat ~/.ssh/azure_vm_key.pub
+Create Static Public IP nautilus-pip (SKU: Standard, Assignment: Static)
+
+Create VM nautilus-vm:
+
+Image: Ubuntu 22.04 LTS
+
+Size: Standard_B1s
+
+Authentication: SSH public key
+
+Attach static IP nautilus-pip
+
+Test SSH:
+
+bash
+ssh -i ~/.ssh/azure_vm_key azureuser@<NAUTILUS_PIP_PUBLIC_IP>
