@@ -1,0 +1,32 @@
+Problem
+Create Application Load Balancer xfusion-alb with target group xfusion-tg for xfusion-ec2.
+
+Solution
+Portal Steps:
+
+Create Security Group xfusion-sg:
+
+Inbound: HTTP port 80 from 0.0.0.0/0
+
+Create Target Group xfusion-tg:
+
+Protocol: HTTP, Port: 80
+
+Register xfusion-ec2 instance
+
+Create ALB xfusion-alb:
+
+Internet-facing
+
+Security group: xfusion-sg
+
+Listener: HTTP:80 → Forward to xfusion-tg
+
+Update EC2 Security Group:
+
+Allow HTTP port 80 from xfusion-sg
+
+Test:
+
+bash
+curl http://<ALB_DNS_NAME>
