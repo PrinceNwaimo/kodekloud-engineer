@@ -1,0 +1,933 @@
+The development team of xFusionCorp Industries is working on to develop a new static website and they are planning to deploy the same on Nautilus App Server using Jenkins pipeline. They have shared their requirements with the DevOps team and accordingly we need to create a Jenkins pipeline job. Please find below more details about the task:
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123. There under user sarah you will find a repository named web_app that is already cloned on App Server 1 under /var/www/html. sarah is a developer who is working on this repository.
+Add a slave node named App Server 1. It should be labeled as stapp01 and its remote root directory should be /home/sarah/jenkins_agent (the repository is cloned under /var/www/html; the agent uses a separate directory so it does not pollute the repo).
+
+We have already cloned repository on App Server 1 under /var/www/html.
+Apache is already installed on the app server and is running on port 8080.
+
+Create a Jenkins pipeline job named xfusion-webapp-job (it must not be a Multibranch pipeline) and configure it to:
+Deploy the code from web_app repository under /var/www/html on App Server 1, as this is the document root of the app server. The pipeline should have a single stage named Deploy ( which is case sensitive ) to accomplish the deployment.
+LB server is already configured. You should be able to see the latest changes you made by clicking on the App button. Please make sure the required content is loading on the main URL https://<LBR-URL> i.e there should not be a sub-directory like https://<LBR-URL>/web_app etc.
+
+
+Note:
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+
+SOLUTION
+
+This is a classic KodeKloud Jenkins Pipeline lab. Since you've already completed the Jenkins slave node labs, this one is very similar, with the addition of a Pipeline job.
+
+Step 1. Verify the repository on App Server 1
+
+SSH to App Server 1.
+
+ssh sarah@stapp01
+
+Verify the repository:
+
+cd /var/www/html
+ls
+
+You should see
+
+web_app
+
+Also verify Git works.
+
+cd web_app
+git status
+Step 2. Create the Jenkins Agent
+
+Open Jenkins
+
+Manage Jenkins → Nodes → New Node
+
+Name
+
+App Server 1
+
+Permanent Agent
+
+Configure
+
+Number of executors
+
+1
+
+Remote root directory
+
+/home/sarah/jenkins_agent
+
+Labels
+
+stapp01
+
+Launch method
+
+Launch agents via SSH
+
+Host
+
+stapp01
+
+Credentials
+
+Use the SSH credentials for sarah.
+
+Save.
+
+Wait until the node becomes
+
+Online
+Step 3. Install Pipeline plugin (if needed)
+
+If Pipeline isn't available
+
+Manage Jenkins
+
+↓
+
+Plugins
+
+Install
+
+Pipeline
+
+Restart Jenkins.
+
+Step 4. Create the Pipeline Job
+
+Create New Item
+
+Name
+
+xfusion-webapp-job
+
+Choose
+
+Pipeline
+
+NOT
+
+Multibranch Pipeline
+Step 5. Restrict it to App Server 1
+
+Under Pipeline
+
+Choose
+
+Pipeline script
+
+Paste
+
+pipeline {
+    agent {
+        label 'stapp01'
+    }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                dir('/var/www/html/web_app') {
+                    sh '''
+                        git reset --hard
+                        git pull origin master
+
+                        cp -r ./* /var/www/html/
+
+                        rm -rf /var/www/html/.git
+                    '''
+                }
+            }
+        }
+    }
+}
+
+If the default branch is main, use
+
+git pull origin main
+
+instead.
+
+Check with
+
+cd /var/www/html/web_app
+git branch
+
+The active branch will have a *
+
+Example
+
+* main
+Step 6. Save
+
+Click
+
+Save
+Step 7. Build
+
+Click
+
+Build Now
+
+Open Console Output.
+
+You should see something like
+
+Stage "Deploy"
+
+git pull
+
+cp -r
+
+Finished: SUCCESS
+Step 8. Verify the deployment
+
+SSH into App Server
+
+ls /var/www/html
+
+You should now see website files directly in
+
+/var/www/html
+
+instead of only
+
+/var/www/html/web_app
+
+For example
+
+index.html
+css
+js
+images
+
+The important file is
+
+/var/www/html/index.html
+Step 9. Test the site
+
+Click the App button.
+
+The website should load from
+
+https://<LB-URL>/
+
+NOT
+
+https://<LB-URL>/web_app
+If the page is blank
+
+Check Apache
+
+sudo systemctl status httpd
+
+or Ubuntu
+
+sudo systemctl status apache2
+
+Verify it listens on port 8080
+
+ss -ltn | grep 8080
+If the build fails with permission denied
+
+Give Sarah ownership of the web root.
+
+sudo chown -R sarah:sarah /var/www/html
+
+or at least
+
+sudo chown -R sarah:sarah /var/www/html/web_app
+Most common reason this lab fails
+
+The deployment command:
+
+cp -r ./* /var/www/html/
+
+does not copy hidden files. To ensure the entire working tree (including dotfiles if needed) is copied while excluding the Git metadata, a more robust deployment is:
+
+pipeline {
+    agent {
+        label 'stapp01'
+    }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                dir('/var/www/html/web_app') {
+                    sh '''
+                        git reset --hard
+                        git pull origin main || git pull origin master
+
+                        find /var/www/html -mindepth 1 -maxdepth 1 ! -name web_app -exec rm -rf {} +
+
+                        cp -a . /var/www/html/
+                        rm -rf /var/www/html/.git
+                    '''
+                }
+            }
+        }
+    }
+}
+
+This version works whether the repository uses main or master, preserves file attributes, copies hidden files, and ensures the website is served directly from /var/www/html rather than /web_app.
+Perfect. We'll do this exactly as if we're starting from a fresh environment. Don't skip ahead—we'll verify each part before moving on.
+
+Step 1: Open Jenkins
+Click the Jenkins button at the top of the lab.
+Log in with:
+Username: admin
+Password: Adm!n321
+
+Once you're on the Jenkins dashboard, leave it open.
+
+Step 2: Open Gitea
+Click the Gitea button at the top of the lab.
+Log in with:
+Username: sarah
+Password: Sarah_pass123
+
+After logging in:
+
+Click your profile (or Dashboard).
+Verify there is a repository named:
+web_app
+
+Do not clone anything. The repository is already cloned on App Server 1.
+
+Step 3: Connect to the Jump Host
+
+Open the terminal provided by the lab.
+
+Check your current user:
+
+whoami
+
+You should normally be logged in as:
+
+thor
+Step 4: SSH to App Server 1
+
+Run:
+
+ssh sarah@stapp01
+
+If prompted:
+
+Are you sure you want to continue connecting?
+
+Type:
+
+yes
+
+Enter Sarah's password if prompted.
+
+Step 5: Verify the Repository
+
+Run:
+
+cd /var/www/html
+
+List the contents:
+
+ls -l
+
+You should see something similar to:
+
+web_app
+
+Now enter the repository:
+
+cd web_app
+
+Check Git status:
+
+git status
+
+It should report that you're on a branch and the working tree is clean.
+
+Step 6: Find the Git Branch
+
+Run:
+
+git branch
+
+Example output:
+
+* main
+
+or
+
+* master
+
+Make a note of which branch is active. We'll use it later in the pipeline.
+
+Step 7: Exit Back to the Jump Host
+
+Type:
+
+exit
+
+You should be back on the jump host.
+
+Stop here.
+
+Reply with the output of:
+
+git branch
+
+(or simply tell me whether the active branch is main or master), and we'll continue with Step 8: Creating the Jenkins Agent.
+Good catch. The repository is not under /var/www/html, even though the task says it should be. This is common in KodeKloud labs when the initial state isn't exactly as described.
+
+Let's locate it first before configuring Jenkins.
+
+Step 8: Find the web_app repository
+
+While logged in as sarah, run:
+
+find / -type d -name web_app 2>/dev/null
+
+If that doesn't find anything, run:
+
+find /home -type d -name web_app 2>/dev/null
+
+and then:
+
+find /opt -type d -name web_app 2>/dev/null
+
+Finally, verify whether /var/www/html is actually a Git repository:
+
+cd /var/www/html
+git status
+Please send me the output of these four commands:
+find / -type d -name web_app 2>/dev/null
+find /home -type d -name web_app 2>/dev/null
+find /opt -type d -name web_app 2>/dev/null
+cd /var/www/html
+git status
+
+Once we know where the repository actually is (or whether it has been replaced), we'll continue with the correct setup.
+Excellent. That output tells us exactly what's happening.
+
+The key result is:
+
+On branch master
+Your branch is up to date with 'origin/master'.
+
+This means /var/www/html itself is the Git working tree. There is no web_app subdirectory. The lab instructions are slightly inaccurate in your environment.
+
+So we'll use /var/www/html directly in the Jenkins pipeline.
+
+Step 9: Verify the Git Remote
+
+While still on stapp01 as sarah, run:
+
+git remote -v
+
+You should see something like:
+
+origin    http://gitea.../sarah/web_app.git (fetch)
+origin    http://gitea.../sarah/web_app.git (push)
+
+If you see that, the repository is correctly linked to Gitea.
+
+Step 10: Exit Back to the Jump Host
+exit
+Step 11: Create the Jenkins Agent
+
+Go back to Jenkins.
+
+Navigate to:
+
+Manage Jenkins
+    ↓
+Nodes
+    ↓
+New Node
+
+Fill in the following:
+
+Node name
+
+App Server 1
+
+Select:
+
+Permanent Agent
+
+Click Create.
+
+Configure the node as follows:
+
+Field	Value
+Number of executors	1
+Remote root directory	/home/sarah/jenkins_agent
+Labels	stapp01
+Usage	Use this node as much as possible
+Launch method	Launch agents via SSH
+Host	stapp01
+SSH Credentials
+
+If Sarah's SSH credentials don't already exist:
+
+Click Add beside Credentials.
+Choose Jenkins.
+Kind: Username with password
+Username:
+sarah
+Password:
+Sarah_pass123
+ID (optional):
+sarah
+Click Add.
+
+Then select those credentials for the node.
+
+Click Save.
+
+Stop here
+
+Tell me:
+
+Did the node come Online?
+Or did Jenkins show an error (such as SSH authentication failed, host key verification failed, or connection refused)?
+
+Once the agent is online, we'll create the Pipeline job.
+Perfect! ✅
+
+That confirms:
+
+The repository is web_app.
+It is checked out directly into /var/www/html.
+The active branch is master.
+The remote points to the correct Gitea repository.
+
+We'll use this information in the pipeline.
+
+Step 11: Create the Jenkins Agent
+
+In Jenkins, go to:
+
+Manage Jenkins
+    ↓
+Nodes
+    ↓
+New Node
+Node Name
+App Server 1
+
+Select:
+
+Permanent Agent
+
+Click Create.
+
+Configure the agent
+
+Fill in these values:
+
+Field	Value
+Number of executors	1
+Remote root directory	/home/sarah/jenkins_agent
+Labels	stapp01
+Usage	Use this node as much as possible
+Launch Method
+
+Select:
+
+Launch agents via SSH
+
+Host:
+
+stapp01
+Add SSH Credentials
+
+If there are no credentials for Sarah:
+
+Kind: Username with password
+Username:
+sarah
+Password:
+Sarah_pass123
+ID (optional):
+sarah
+
+Save the credentials and select them.
+
+Host Key Verification Strategy
+
+If this option is available, choose:
+
+Non verifying Verification Strategy
+
+(This avoids SSH host key issues in the lab environment.)
+
+Save
+
+Click Save.
+
+Wait a few seconds.
+
+The node should display:
+
+Online
+Tell me the result
+
+Please tell me exactly what you see after saving:
+
+✅ Online
+❌ SSH Authentication Failed
+❌ Host key verification failed
+❌ Connection refused
+❌ Something else (copy the error message)
+
+Once the agent is online, we'll create the xfusion-webapp-job pipeline.
+Good progress. ✅ SSH authentication is working. The problem is Java version mismatch on App Server 1.
+
+The important error:
+
+UnsupportedClassVersionError:
+hudson/remoting/Launcher has been compiled by a more recent version of Java
+(class file version 61.0)
+
+this version of the Java Runtime only recognizes class file versions up to 55.0
+
+Meaning:
+
+Jenkins agent requires Java 17 (class version 61)
+App Server 1 currently has Java 11 (class version 55)
+
+We need to upgrade Java on stapp01.
+
+Step 12: Install Java 17 on App Server 1
+
+SSH into App Server 1:
+
+ssh sarah@stapp01
+
+Check current Java:
+
+java -version
+
+You will probably see Java 11.
+
+Install Java 17
+
+Since this server is RedHat/CentOS based, run:
+
+sudo yum install java-17-openjdk-devel -y
+
+Wait for installation to complete.
+
+Step 13: Verify Java Version
+
+Run:
+
+java -version
+
+Expected:
+
+openjdk version "17.x.x"
+Step 14: Select Java 17 (if multiple versions exist)
+
+Run:
+
+sudo alternatives --config java
+
+You may see:
+
+1 /usr/lib/jvm/java-11...
+2 /usr/lib/jvm/java-17...
+
+Choose the Java 17 option.
+
+Step 15: Restart Jenkins Agent Connection
+
+Go back to Jenkins:
+
+Manage Jenkins
+   ↓
+Nodes
+   ↓
+App Server 1
+
+Click:
+
+Disconnect
+
+Then:
+
+Launch agent
+
+Expected successful output:
+
+[SSH] Authentication successful.
+[SSH] Starting agent process
+Agent successfully connected
+
+The node should become:
+
+App Server 1   Online
+
+Do Step 12 first and send me the output of:
+
+java -version
+
+after installing Java 17. Then we continue to creating the Pipeline job.
+Excellent! ✅ The Jenkins agent is now successfully connected.
+
+The important confirmation:
+
+<===[JENKINS REMOTING CAPACITY]===>channel started
+...
+Agent successfully connected and online
+
+Your node App Server 1 is ready.
+
+Now we move to creating the Pipeline job.
+
+Step 16: Create the Jenkins Pipeline Job
+
+Go to Jenkins dashboard.
+
+Click:
+
+New Item
+
+Enter:
+
+xfusion-webapp-job
+
+Select:
+
+Pipeline
+
+⚠️ Do not select Multibranch Pipeline.
+
+Click:
+
+OK
+Step 17: Configure Pipeline
+
+Scroll to the bottom until you see:
+
+Pipeline
+
+For Definition, select:
+
+Pipeline script
+
+Paste this pipeline:
+
+pipeline {
+    agent {
+        label 'stapp01'
+    }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                sh '''
+                    cd /var/www/html
+                    
+                    git pull origin master
+                '''
+            }
+        }
+    }
+}
+Why this pipeline?
+
+Your setup is:
+
+Gitea
+  |
+  |
+  v
+/var/www/html  (already cloned repository)
+  |
+  |
+Apache :8080
+
+The pipeline only needs to update the existing checkout.
+
+The requirement says:
+
+Deploy the code from web_app repository under /var/www/html
+
+Since /var/www/html is already the repository, we deploy from there.
+
+Step 18: Save the Job
+
+Click:
+
+Save
+Step 19: Run the Pipeline
+
+On the job page:
+
+Click:
+
+Build Now
+
+Then click the build number:
+
+Example:
+
+#1
+
+Open:
+
+Console Output
+
+Expected result:
+
+Started by user admin
+
+Running on App Server 1
+
++ cd /var/www/html
++ git pull origin master
+
+Already up to date.
+
+Finished: SUCCESS
+
+Run the build now and send me the Console Output.
+
+If it succeeds, we will do the final verification through the Load Balancer URL.
+For this task, you need the Pipeline plugin in Jenkins.
+
+Go to:
+
+Manage Jenkins
+→ Plugins
+→ Available plugins
+
+Search for:
+
+Pipeline
+
+Install:
+
+✅ Pipeline (workflow-aggregator)
+
+This is the main plugin bundle and it automatically installs the required dependencies, including:
+
+Pipeline: Job
+Pipeline: Model Definition
+Pipeline: Basic Steps
+Pipeline: Nodes and Processes
+Pipeline: Groovy
+Workflow APIs
+
+After installation:
+
+Tick:
+Restart Jenkins when installation is complete and no jobs are running
+
+or restart manually:
+
+sudo systemctl restart jenkins
+Refresh the Jenkins page.
+
+To confirm it installed:
+
+Go to:
+
+New Item
+
+You should now see:
+
+Pipeline
+
+as a job type option.
+
+Once you can see Pipeline, continue with creating:
+
+xfusion-webapp-job
+
+as a normal Pipeline job (not Multibranch).
+Excellent! ✅ Your Jenkins Pipeline job is working successfully.
+
+Your output confirms all required parts are correct:
+
+Running on App Server 1
+
+✅ Jenkins agent is correctly configured with label stapp01.
+
+/home/sarah/jenkins_agent/workspace/xfusion-webapp-job
+
+✅ Jenkins is using the separate agent workspace (not polluting the repository).
+
+cd /var/www/html
+git pull origin master
+
+✅ Deployment is happening from the correct document root.
+
+Already up to date.
+
+✅ The repository connection to Gitea is correct.
+
+Finished: SUCCESS
+
+✅ Pipeline completed successfully.
+
+Final check: Verify the website
+
+Now we need to make sure the Load Balancer serves the site from the root URL.
+
+Step 20: Check App Server content
+
+SSH to App Server 1:
+
+ssh sarah@stapp01
+
+Check:
+
+ls -la /var/www/html
+
+You should see:
+
+index.html
+
+and the website files directly here.
+
+Not:
+
+/var/www/html/web_app/index.html
+Step 21: Test Apache locally
+
+On App Server 1:
+
+curl localhost:8080
+
+You should see your HTML content.
+
+Step 22: Test through Load Balancer
+
+Click the App button in the lab.
+
+The URL should load:
+
+https://<LBR-URL>/
+
+It should not be:
+
+https://<LBR-URL>/web_app
+
+At this point, the task requirements are satisfied:
+
+✅ Jenkins slave node created: App Server 1
+✅ Label: stapp01
+✅ Remote root: /home/sarah/jenkins_agent
+✅ Pipeline job: xfusion-webapp-job
+✅ Not Multibranch pipeline
+✅ Single stage named exactly: Deploy
+✅ Code deployed from /var/www/html
+✅ Pipeline successful
+
+You can submit the task.
