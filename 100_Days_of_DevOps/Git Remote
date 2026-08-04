@@ -1,0 +1,12 @@
+Problem
+Add remote dev_blog pointing to /opt/xfusioncorp_blog.git, copy index.html, commit, push.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/blog
+git remote add dev_blog /opt/xfusioncorp_blog.git
+git checkout master
+cp /tmp/index.html .
+git add index.html
+git commit -m "Add index.html from /tmp to master"
+git push dev_blog master
