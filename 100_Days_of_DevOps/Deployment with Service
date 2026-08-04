@@ -1,0 +1,55 @@
+Problem: Create a deployment using nginx:latest image with 3 replicas, container named nginx-container. Create a NodePort type service named nginx-service with nodePort 30011.
+
+Solution:
+
+nginx-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+nginx-service.yaml:
+
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30011
+    protocol: TCP
+  selector:
+    app: nginx
+bash
+kubectl apply -f nginx-deployment.yaml
+kubectl apply -f nginx-service.yaml
+
+# Verify
+kubectl get deployment nginx-deployment
+kubectl get pods -l app=nginx
+kubectl get service nginx-service
+kubectl describe service nginx-service
