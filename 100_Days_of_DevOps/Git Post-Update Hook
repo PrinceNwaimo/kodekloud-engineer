@@ -1,0 +1,39 @@
+Problem
+Create post-update hook that creates release tag with current date when master branch is updated.
+
+Solution
+bash
+# As natasha user
+sudo su - natasha
+cd /opt/beta.git/hooks
+
+cat > post-update << 'EOF'
+#!/bin/sh
+while read oldrev newrev refname
+do
+    if [ "$refname" = "refs/heads/master" ]; then
+        tag="release-$(date +%Y-%m-%d)"
+        if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists, skipping"
+        else
+            git tag "$tag" "$newrev"
+            echo "Created tag $tag"
+        fi
+    fi
+done
+EOF
+
+chmod 755 post-update
+
+# Test the hook
+cd /usr/src/kodekloudrepos/beta
+git config user.name "Natasha"
+git config user.email "natasha@stratosdc"
+echo "trigger" >> trigger.txt
+git add trigger.txt
+git commit -m "Trigger hook"
+git push origin master
+
+# Verify tag
+git fetch --tags
+git tag -l | grep release-
