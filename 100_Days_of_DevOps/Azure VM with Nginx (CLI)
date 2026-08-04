@@ -1,0 +1,40 @@
+Problem
+Create Azure VM devops-vm with Nginx using Azure CLI.
+
+Solution
+bash
+# Variables
+RESOURCE_GROUP="kml_rg_main-23c8edca8cd84d11"
+LOCATION="eastus"
+VM_NAME="devops-vm"
+ADMIN_USER="azureuser"
+
+# Create cloud-init script
+cat <<EOF > cloud-init.txt
+#cloud-config
+package_update: true
+packages:
+  - nginx
+runcmd:
+  - systemctl enable nginx
+  - systemctl start nginx
+EOF
+
+# Create VM
+az vm create \
+  --resource-group $RESOURCE_GROUP \
+  --name $VM_NAME \
+  --image Ubuntu2204 \
+  --size Standard_B1s \
+  --admin-username $ADMIN_USER \
+  --generate-ssh-keys \
+  --location $LOCATION \
+  --custom-data cloud-init.txt \
+  --storage-sku Standard_LRS \
+  --os-disk-size-gb 30
+
+# Open port 80
+az vm open-port --resource-group $RESOURCE_GROUP --name $VM_NAME --port 80
+
+# Get public IP
+az vm show --resource-group $RESOURCE_GROUP --name $VM_NAME -d --query publicIps -o tsv
