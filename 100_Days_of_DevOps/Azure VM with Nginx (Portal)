@@ -1,0 +1,34 @@
+Problem
+Create Azure VM nautilus-vm with Nginx installed via custom script extension.
+
+Solution
+Portal Steps:
+
+Create VM nautilus-vm:
+
+Image: Ubuntu 22.04 LTS
+
+Allow SSH (22) and HTTP (80)
+
+Add Custom Script Extension (Advanced tab):
+
+bash
+#!/bin/bash
+apt-get update -y
+apt-get install nginx -y
+systemctl start nginx
+systemctl enable nginx
+Verify NSG allows HTTP port 80
+
+Test:
+
+bash
+curl http://<PUBLIC_IP>
+Manual fix if script fails:
+
+bash
+ssh -i ~/.ssh/azure_vm_key azureuser@<PUBLIC_IP>
+sudo apt-get update -y
+sudo apt-get install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
