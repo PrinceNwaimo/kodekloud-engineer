@@ -1,0 +1,16 @@
+Problem
+Install tomcat server on App Server 3, configure it to run on port 8084, and deploy ROOT.war.
+
+Solution
+bash
+# On Jump Host
+scp /tmp/ROOT.war app-server-3-user@app-server-3-ip:/tmp
+
+# On App Server 3
+sudo yum install tomcat
+sudo sed -i 's/8080/8084/' /etc/tomcat/server.xml
+sudo cp /tmp/ROOT.war /var/lib/tomcat/webapps/
+sudo systemctl restart tomcat
+
+# Test
+curl http://localhost:8084
