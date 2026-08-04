@@ -1,0 +1,15 @@
+Problem
+Install iptables and block incoming port 6300 for everyone except LBR host.
+
+Solution
+bash
+# Install iptables
+sudo yum install iptables-services -y
+
+# Allow LBR host only on port 6300
+sudo iptables -A INPUT -p tcp --dport 6300 -s 10.244.240.75 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 6300 -j DROP
+
+# Save rules to persist after reboot
+sudo service iptables save
+sudo systemctl enable iptables
