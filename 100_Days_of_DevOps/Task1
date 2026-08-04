@@ -1,0 +1,23 @@
+Apache2 Installation in Container on App Server 2
+Problem: Install apache2 in kkloud container, configure Apache to listen on port 8087, make sure Apache service is up and running.
+
+Solution:
+
+bash
+# Get shell inside container
+docker exec -it kkloud /bin/bash
+
+# Install apache2
+apt-get update
+apt-get install -y apache2
+
+# Change Apache port to 8087
+sed -i 's/Listen 80/Listen 8087/g' /etc/apache2/ports.conf
+sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:8087>/g' /etc/apache2/sites-available/000-default.conf
+
+# Start Apache
+service apache2 start
+
+# Verify
+service apache2 status
+curl http://localhost:8087
