@@ -1,0 +1,23 @@
+Problem
+Apache service not reachable on port 6400. Find and fix the issue.
+
+Solution
+bash
+# Check Apache service status
+sudo systemctl status apache2
+
+# If not running, start it
+sudo systemctl start apache2
+
+# Check port listening
+sudo netstat -tlnp | grep 6400
+
+# Check firewall
+sudo ufw status
+sudo ufw allow 6400/tcp
+
+# Test locally
+curl http://localhost:6400
+
+# Test from jump host
+curl http://stapp03:6400
