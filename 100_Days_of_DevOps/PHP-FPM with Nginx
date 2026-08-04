@@ -1,0 +1,47 @@
+Problem
+Install nginx on port 8099 with PHP-FPM 8.1 using unix socket.
+
+Solution
+bash
+# Install nginx and php-fpm
+sudo yum install epel-release -y
+sudo dnf module reset php -y
+sudo dnf module enable php:8.1 -y
+sudo dnf install nginx php-fpm php -y
+
+# Configure nginx
+sudo tee /etc/nginx/conf.d/php-app.conf > /dev/null <<'EOF'
+server {
+    listen 8099;
+    server_name _;
+    root /var/www/html;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass unix:/var/run/php-fpm/default.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_index index.php;
+    }
+}
+EOF
+
+# Configure php-fpm
+sudo mkdir -p /var/run/php-fpm
+sudo sed -i 's|^listen = .*|listen = /var/run/php-fpm/default.sock|' /etc/php-fpm.d/www.conf
+sudo sed -i 's/;listen.owner = nobody/listen.owner = nginx/' /etc/php-fpm.d/www.conf
+sudo sed -i 's/;listen.group = nobody/listen.group = nginx/' /etc/php-fpm.d/www.conf
+
+# Start services
+sudo systemctl enable --now php-fpm nginx
+
+# Open firewall
+sudo firewall-cmd --permanent --add-port=8099/tcp
+sudo firewall-cmd --reload
+
+# Test
+curl http://stapp03:8099/index.php
