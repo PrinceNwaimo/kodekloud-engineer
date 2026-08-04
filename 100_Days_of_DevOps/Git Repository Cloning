@@ -1,0 +1,9 @@
+Problem
+Clone the repository /opt/apps.git to /usr/src/kodekloudrepos as natasha user.
+
+Solution
+bash
+sudo su - natasha
+cd /usr/src/kodekloudrepos
+git clone /opt/apps.git
+ls -l
