@@ -1,0 +1,14 @@
+Docker Image Tagging on App Server 3
+Problem: Pull busybox:musl image on App Server 3 and re-tag (create new tag) this image as busybox:news.
+
+Solution:
+
+bash
+# Pull the image
+docker pull busybox:musl
+
+# Re-tag it
+docker tag busybox:musl busybox:news
+
+# Verify both tags exist
+docker images | grep busybox
