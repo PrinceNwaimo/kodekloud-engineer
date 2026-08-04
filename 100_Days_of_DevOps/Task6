@@ -1,0 +1,20 @@
+Fix Dockerfile on App Server 2
+Problem: The Dockerfile is placed on App Server 2 under /opt/docker directory. Fix the issues with this file and make sure it is able to build the image.
+
+Solution:
+
+bash
+# Check the Dockerfile
+cat /opt/docker/Dockerfile
+
+# Build the image
+cd /opt/docker && docker build -t nautilus-web .
+Common issues to fix:
+
+Check for syntax errors
+
+Ensure COPY commands have correct paths
+
+Verify RUN commands syntax
+
+Check for missing dependencies
