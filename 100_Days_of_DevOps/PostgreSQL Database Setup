@@ -1,0 +1,16 @@
+Problem
+Create database user kodekloud_gem with password BruCStnMT5, and database kodekloud_db9 with full permissions.
+
+Solution
+bash
+# Switch to postgres user
+sudo -i -u postgres psql
+
+# In psql
+CREATE USER kodekloud_gem WITH PASSWORD 'BruCStnMT5';
+CREATE DATABASE kodekloud_db9 OWNER kodekloud_gem;
+GRANT ALL PRIVILEGES ON DATABASE kodekloud_db9 TO kodekloud_gem;
+\q
+
+# Verify
+psql -U kodekloud_gem -d kodekloud_db9 -h localhost -c "\conninfo"
