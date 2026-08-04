@@ -1,0 +1,23 @@
+Problem: Fix the issue with nginx-phpfpm pod and nginx-config configmap. Copy /home/thor/index.php to the nginx-container.
+
+Solution:
+
+bash
+# Check the ConfigMap
+kubectl get configmap nginx-config -o yaml
+
+# Fix the ConfigMap
+kubectl edit configmap nginx-config
+# Change "index.php index.html;" to "index index.php index.html;"
+
+# Recreate the pod
+kubectl delete pod nginx-phpfpm
+
+# Wait for pod to be running
+kubectl get pods -w
+
+# Copy file
+kubectl cp /home/thor/index.php nginx-phpfpm:/usr/share/nginx/html/index.php -c php-fpm-container
+
+# Test
+kubectl exec nginx-phpfpm -c nginx-container -- curl -s http://localhost/index.php
