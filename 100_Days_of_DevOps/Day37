@@ -1,0 +1,15 @@
+Copy File to Container on App Server 3
+Problem: Copy an encrypted file /tmp/nautilus.txt.gpg from the docker host to the ubuntu_latest container located at /opt/. Ensure the file is not modified.
+
+Solution:
+
+bash
+# Copy file to container
+docker cp /tmp/nautilus.txt.gpg ubuntu_latest:/opt/
+
+# Verify it copied correctly
+docker exec ubuntu_latest ls -l /opt/nautilus.txt.gpg
+
+# Verify file integrity (compare hashes)
+docker exec ubuntu_latest sha256sum /opt/nautilus.txt.gpg
+sha256sum /tmp/nautilus.txt.gpg
