@@ -1,0 +1,15 @@
+Problem
+Create new branch xfusioncorp_ecommerce from master in /usr/src/kodekloudrepos/ecommerce.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/ecommerce
+
+# Fix permissions if needed
+sudo chown -R natasha:natasha .
+
+# Create branch
+git checkout master
+git pull
+git checkout -b xfusioncorp_ecommerce
+git push -u origin xfusioncorp_ecommerce
