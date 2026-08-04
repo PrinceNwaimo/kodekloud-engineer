@@ -1,0 +1,12 @@
+Problem
+Cherry-pick commit "Update info.txt" from feature branch to master.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/official
+sudo git fetch origin
+sudo git log origin/feature --oneline --grep="Update info.txt"
+sudo git checkout master
+sudo git pull origin master
+sudo git cherry-pick <commit-hash>
+sudo git push origin master
