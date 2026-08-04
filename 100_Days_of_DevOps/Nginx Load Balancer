@@ -1,0 +1,29 @@
+Problem
+Configure Nginx on LBR server to load balance across all app servers.
+
+Solution
+bash
+# Install nginx
+sudo yum install nginx -y
+
+# Update /etc/nginx/nginx.conf
+sudo tee /etc/nginx/nginx.conf > /dev/null <<'EOF'
+http {
+    upstream backend {
+        server app1:80;
+        server app2:80;
+        server app3:80;
+    }
+    server {
+        listen 80;
+        location / {
+            proxy_pass http://backend;
+        }
+    }
+}
+EOF
+
+sudo systemctl restart nginx
+
+# Test
+curl http://stlb01:80
