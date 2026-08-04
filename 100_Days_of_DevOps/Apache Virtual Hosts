@@ -1,0 +1,34 @@
+Problem
+Configure Apache on port 5001 with /media/ and /apps/ virtual hosts.
+
+Solution
+bash
+# On App Server 3
+sudo yum install httpd -y
+
+# Change port to 5001
+sudo sed -i 's/Listen 80/Listen 5001/' /etc/httpd/conf/httpd.conf
+
+# Copy websites from jump host
+# On jump host:
+scp -r /home/thor/media thor@stapp03:/tmp/
+scp -r /home/thor/apps thor@stapp03:/tmp/
+
+# On App Server 3:
+sudo mv /tmp/media /var/www/html/
+sudo mv /tmp/apps /var/www/html/
+sudo chown -R apache:apache /var/www/html/media /var/www/html/apps
+
+# SELinux fix
+sudo chcon -R -t httpd_sys_content_t /var/www/html/
+
+# Start Apache
+sudo systemctl enable --now httpd
+
+# Open firewall
+sudo firewall-cmd --permanent --add-port=5001/tcp
+sudo firewall-cmd --reload
+
+# Test
+curl http://localhost:5001/media/
+curl http://localhost:5001/apps/
