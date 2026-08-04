@@ -1,0 +1,37 @@
+Problem: Create a pod named volume-share-devops with two containers sharing an emptyDir volume.
+
+Solution:
+
+volume-share-devops.yaml:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-share-devops
+spec:
+  containers:
+    - name: volume-container-devops-1
+      image: ubuntu:latest
+      command: ["sleep", "infinity"]
+      volumeMounts:
+        - name: volume-share
+          mountPath: /tmp/official
+    - name: volume-container-devops-2
+      image: ubuntu:latest
+      command: ["sleep", "infinity"]
+      volumeMounts:
+        - name: volume-share
+          mountPath: /tmp/cluster
+  volumes:
+    - name: volume-share
+      emptyDir: {}
+bash
+kubectl apply -f volume-share-devops.yaml
+kubectl get pod volume-share-devops -w
+
+# Test shared volume
+kubectl exec -it volume-share-devops -c volume-container-devops-1 -- bash -c 'echo "Welcome to xFusionCorp Industries" > /tmp/official/official.txt'
+
+# Verify on second container
+kubectl exec volume-share-devops -c volume-container-devops-2 -- cat /tmp/cluster/official.txt
