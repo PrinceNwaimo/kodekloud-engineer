@@ -1,0 +1,9 @@
+Problem
+Reset git history to only have 2 commits (initial commit and "add data.txt file") in /usr/src/kodekloudrepos/ecommerce.
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/ecommerce
+git log --oneline  # Find commit hash for "add data.txt file"
+git reset --hard <commit_hash>
+git push origin HEAD --force
