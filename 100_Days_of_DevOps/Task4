@@ -1,0 +1,15 @@
+Nginx Container on App Server 3
+Problem: Pull nginx:alpine-perl image on Application Server 3. Create a container named cluster using the image. Map host port 6400 to container port 80.
+
+Solution:
+
+bash
+# Pull the image
+docker pull nginx:alpine-perl
+
+# Create and run container
+docker run -d --name cluster -p 6400:80 nginx:alpine-perl
+
+# Verify
+docker ps
+curl http://localhost:6400
