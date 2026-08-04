@@ -1,0 +1,11 @@
+Problem
+Revert latest commit in /usr/src/kodekloudrepos/media with message "revert media".
+
+Solution
+bash
+cd /usr/src/kodekloudrepos/media
+git revert HEAD --no-edit
+git commit --amend -m "revert media"
+
+# Or one-liner
+git revert --no-commit HEAD && git commit -m "revert media"
