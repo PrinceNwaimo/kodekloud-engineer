@@ -1,0 +1,23 @@
+Problem
+Create private S3 bucket xfusion-sync-28431 and sync data from xfusion-s3-2184.
+
+Solution
+bash
+# Configure AWS CLI
+aws configure
+
+# Create bucket
+aws s3api create-bucket --bucket xfusion-sync-28431 --region us-east-1
+
+# Make bucket private
+aws s3api put-public-access-block --bucket xfusion-sync-28431 \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+# Sync data
+aws s3 sync s3://xfusion-s3-2184 s3://xfusion-sync-28431
+
+# Verify
+aws s3 sync s3://xfusion-s3-2184 s3://xfusion-sync-28431 --dryrun
+aws s3 ls s3://xfusion-s3-2184 --recursive | wc -l
+aws s3 ls s3://xfusion-sync-28431 --recursive | wc -l
