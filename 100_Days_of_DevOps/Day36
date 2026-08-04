@@ -1,0 +1,12 @@
+Nginx Container Deployment on App Server 2
+Problem: On Application Server 2 create a container named nginx_2 using the nginx image with the alpine tag. Ensure container is in a running state.
+
+Solution:
+
+bash
+# Pull and run the container
+docker run -d --name nginx_2 -p 80:80 nginx:alpine
+
+# Verify it's running
+docker ps
+curl localhost
