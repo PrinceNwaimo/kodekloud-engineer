@@ -1,0 +1,26 @@
+Python App Dockerization on App Server 3
+Problem: Create a Dockerfile under /python_app directory, build an image named nautilus/python-app, create a container named pythonapp_nautilus mapped to port 8096.
+
+Solution:
+
+bash
+# Create Dockerfile
+cd /python_app
+cat > Dockerfile << 'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY src/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY src/ .
+EXPOSE 6100
+CMD ["python", "server.py"]
+EOF
+
+# Build the image
+docker build -t nautilus/python-app .
+
+# Run the container
+docker run -d --name pythonapp_nautilus -p 8096:6100 nautilus/python-app
+
+# Test
+curl http://localhost:8096/
