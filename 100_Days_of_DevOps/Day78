@@ -1,0 +1,1568 @@
+The development team of xFusionCorp Industries is working on to develop a new static website and they are planning to deploy the same on Nautilus App Server using Jenkins pipeline. They have shared their requirements with the DevOps team and accordingly we need to create a Jenkins pipeline job. Please find below more details about the task:
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+Similarly, click on the Gitea button on the top bar to access the Gitea UI. Login using username sarah and password Sarah_pass123. There under user sarah you will find a repository named web_app that is already cloned on App Server 1 under /var/www/html. sarah is a developer who is working on this repository.
+Add a slave node named App Server 1. It should be labeled as stapp01 and its remote root directory should be /home/sarah/jenkins_agent (the repository is cloned under /var/www/html).
+We have already cloned repository on App Server 1 under /var/www/html.
+Apache is already installed on the app server and is running on port 8080.
+Create a Jenkins pipeline job named devops-webapp-job (it must not be a Multibranch pipeline) and configure it to:
+Add a string parameter named BRANCH.
+It should conditionally deploy the code from web_app repository under /var/www/html on App Server 1, as this is the document root of the app server. The pipeline should have a single stage named Deploy ( which is case sensitive ) to accomplish the deployment.
+The pipeline should be conditional, if the value master is passed to the BRANCH parameter then it must deploy the master branch, on the other hand if the value feature is passed to the BRANCH parameter then it must deploy the feature branch.
+LB server is already configured. You should be able to see the latest changes you made by clicking on the App button. Please make sure the required content is loading on the main URL https://<LBR-URL> i.e there should not be a sub-directory like https://<LBR-URL>/web_app etc.
+
+
+Note:
+
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work.
+
+SOLUTION
+Absolutely. This task is very similar to the Jenkins/App Server setup you've been doing, but there are three important details to get exactly right:
+
+The Jenkins agent must be App Server 1, label stapp01.
+The pipeline must run the deployment directly in /var/www/html.
+The job must have exactly one stage named Deploy, with master and feature handled conditionally.
+
+Below is the safest step-by-step approach.
+
+1. Understand the final architecture
+
+You want this:
+
+                    Jenkins Controller
+                           |
+                           | SSH
+                           v
+                  +-------------------+
+                  | App Server 1      |
+                  | stapp01           |
+                  |                   |
+                  | /var/www/html     |
+                  |      ↓            |
+                  |   web_app repo    |
+                  |                   |
+                  | Apache :8080      |
+                  +-------------------+
+                           |
+                           v
+                    Load Balancer
+                           |
+                           v
+                  https://<LBR-URL>
+
+The important point is that the website should be:
+
+https://<LBR-URL>/
+
+NOT
+
+https://<LBR-URL>/web_app/
+
+Therefore, the repository contents must remain directly inside:
+
+/var/www/html
+2. Log in to Jenkins
+
+Click the Jenkins button in the lab's top bar.
+
+Use:
+
+Username: admin
+Password: Adm!n321
+
+You should arrive at the Jenkins dashboard.
+
+3. Check whether the SSH Agent plugin is installed
+
+Go to:
+
+Manage Jenkins
+    ↓
+Plugins
+    ↓
+Installed plugins
+
+Search for:
+
+SSH Build Agents
+
+You want the plugin that allows Jenkins to launch agents through SSH.
+
+If it isn't installed:
+
+Manage Jenkins
+→ Plugins
+→ Available plugins
+→ Search: SSH Build Agents
+
+Install it.
+
+If Jenkins asks you to restart:
+
+Restart Jenkins after plugin installation has completed and there are no running jobs.
+
+Then refresh the browser if the Jenkins page appears stuck.
+
+4. Verify App Server 1
+
+The task says the repository is already cloned on App Server 1.
+
+The server should be:
+
+stapp01
+
+The repository should be:
+
+/var/www/html
+
+The agent's Jenkins directory should be:
+
+/home/sarah/jenkins_agent
+
+You can verify this by connecting to App Server 1 if you have terminal access.
+
+Run:
+
+ssh sarah@stapp01
+
+Then:
+
+hostname
+
+You should get something corresponding to App Server 1, normally:
+
+stapp01
+
+Check the repository:
+
+cd /var/www/html
+ls -la
+
+You should see the website files and the .git directory.
+
+Check:
+
+git status
+
+You should see that this is a Git repository.
+
+Also check the branches:
+
+git branch -a
+
+You should have something similar to:
+
+* master
+  remotes/origin/master
+  remotes/origin/feature
+
+If feature isn't shown locally, that's not necessarily a problem. We can fetch it during deployment.
+
+5. Verify Sarah can use the Jenkins agent directory
+
+Still on App Server 1:
+
+ls -ld /home/sarah
+
+Then:
+
+mkdir -p /home/sarah/jenkins_agent
+
+Make sure Sarah owns it:
+
+chown -R sarah:sarah /home/sarah/jenkins_agent
+
+Verify:
+
+ls -ld /home/sarah/jenkins_agent
+
+You want something like:
+
+drwxr-xr-x ... sarah sarah ... /home/sarah/jenkins_agent
+6. Create the Jenkins node
+
+Go to:
+
+Manage Jenkins
+    ↓
+Nodes
+
+Depending on your Jenkins version, this may appear as:
+
+Manage Jenkins
+→ Nodes
+
+Click:
+
+New Node
+7. Name the node correctly
+
+Enter:
+
+App Server 1
+
+Be careful with capitalization and spaces.
+
+Select:
+
+Permanent Agent
+
+Click:
+
+Create
+8. Configure the App Server 1 node
+
+You will now see the node configuration page.
+
+Name
+
+It should be:
+
+App Server 1
+Description
+
+Optional. You can enter:
+
+Nautilus App Server 1
+Number of executors
+
+Use:
+
+1
+
+This is sufficient for the task.
+
+Remote root directory
+
+Enter exactly:
+
+/home/sarah/jenkins_agent
+
+This is important.
+
+Do not use:
+
+/var/www/html
+
+The repository location and Jenkins agent workspace are two different things.
+
+9. Add the label
+
+Under:
+
+Labels
+
+enter:
+
+stapp01
+
+This is important because our Jenkinsfile will later use:
+
+agent {
+    label 'stapp01'
+}
+
+So Jenkins knows the pipeline must execute on App Server 1.
+
+10. Usage
+
+For:
+
+Usage
+
+I'd recommend:
+
+Only build jobs with label expressions matching this node
+
+This prevents unrelated jobs from accidentally running on App Server 1.
+
+11. Configure the launch method
+
+Find:
+
+Launch method
+
+Select:
+
+Launch agents via SSH
+
+You should then see SSH configuration options.
+
+For the host, use:
+
+stapp01
+
+or the hostname/IP provided by the lab if stapp01 doesn't resolve.
+
+12. Configure SSH credentials
+
+You'll need Jenkins to authenticate to App Server 1 as:
+
+sarah
+
+Click:
+
+Add
+
+under Credentials.
+
+Select:
+
+Jenkins
+
+Then create an SSH credential.
+
+The important username is:
+
+sarah
+
+If your lab provides an SSH private key for Sarah, put that private key into the credential.
+
+Give it an ID such as:
+
+sarah-stapp01
+
+Then select that credential for the node.
+
+Important
+
+Don't use:
+
+jenkins
+
+as the SSH user.
+
+The task specifically gives us:
+
+/home/sarah/jenkins_agent
+
+and the existing repository is owned/used by Sarah.
+
+13. Save the node
+
+Click:
+
+Save
+
+Jenkins should attempt to launch the agent.
+
+Go back to:
+
+Manage Jenkins
+→ Nodes
+
+You want to see:
+
+App Server 1
+[online]
+
+Click the node and look at the log.
+
+A successful connection normally contains messages similar to:
+
+SSHLauncher{host='stapp01' ...}
+...
+Connected via SSH.
+...
+Agent successfully connected and online
+14. If App Server 1 won't connect
+
+Since you've encountered this before, check these on App Server 1.
+
+Check SSH
+sudo systemctl status ssh
+
+If sudo isn't available to Sarah, don't worry—the lab may already have SSH configured.
+
+Test from Jenkins controller if possible:
+
+ssh sarah@stapp01
+
+Also check:
+
+hostname
+
+and:
+
+ls -ld /home/sarah/jenkins_agent
+
+The directory must be writable by Sarah.
+
+15. Create the pipeline job
+
+Return to the Jenkins dashboard.
+
+Click:
+
+New Item
+
+Enter:
+
+nautilus-webapp-job
+
+Select:
+
+Pipeline
+Very important
+
+Do NOT select:
+
+Multibranch Pipeline
+
+The task explicitly says it must not be a Multibranch Pipeline.
+
+Click:
+
+OK
+16. Add the BRANCH parameter
+
+On the job configuration page, find:
+
+This project is parameterized
+
+Enable it.
+
+Click:
+
+Add Parameter
+
+Select:
+
+String Parameter
+
+Configure:
+
+Name
+BRANCH
+Default Value
+master
+Description
+
+You can use:
+
+Branch to deploy: master or feature
+
+So the job will allow:
+
+BRANCH=master
+
+or:
+
+BRANCH=feature
+17. Configure the Pipeline
+
+Scroll down to:
+
+Pipeline
+
+For:
+
+Definition
+
+select:
+
+Pipeline script
+
+Do not select SCM unless the task specifically requires it.
+
+We can put the Jenkins pipeline directly into the job.
+
+18. Use this Jenkins pipeline
+
+Paste the following:
+
+pipeline {
+    agent {
+        label 'stapp01'
+    }
+
+    stages {
+        stage('Deploy') {
+            steps {
+                script {
+                    if (params.BRANCH == 'master') {
+                        sh '''
+                            cd /var/www/html
+                            git fetch origin
+                            git checkout master
+                            git reset --hard origin/master
+                        '''
+                    } else if (params.BRANCH == 'feature') {
+                        sh '''
+                            cd /var/www/html
+                            git fetch origin
+                            git checkout feature
+                            git reset --hard origin/feature
+                        '''
+                    } else {
+                        error "Invalid BRANCH value: ${params.BRANCH}. Use master or feature."
+                    }
+                }
+            }
+        }
+    }
+}
+19. Why this pipeline works
+
+Let's break it down.
+
+Agent
+agent {
+    label 'stapp01'
+}
+
+This tells Jenkins:
+
+Run this pipeline on the Jenkins agent labelled stapp01.
+
+Therefore the commands execute on:
+
+App Server 1
+Stage
+
+The task requires exactly one stage:
+
+stage('Deploy')
+
+Notice the capital D.
+
+It must be:
+
+Deploy
+
+not:
+
+deploy
+
+or:
+
+Deployment
+20. Master deployment
+
+When you run:
+
+BRANCH=master
+
+Jenkins executes:
+
+cd /var/www/html
+git fetch origin
+git checkout master
+git reset --hard origin/master
+
+So the current document root becomes the latest master branch.
+
+21. Feature deployment
+
+When:
+
+BRANCH=feature
+
+is supplied, Jenkins executes:
+
+cd /var/www/html
+git fetch origin
+git checkout feature
+git reset --hard origin/feature
+
+Therefore:
+
+/var/www/html
+
+contains the feature branch.
+
+22. Why we're not doing git clone
+
+Do not do:
+
+git clone ... /var/www/html/web_app
+
+because that would produce:
+
+/var/www/html/web_app
+
+The website would then potentially be available at:
+
+https://<LBR-URL>/web_app
+
+The task specifically says this is wrong.
+
+We want:
+
+/var/www/html/index.html
+
+rather than:
+
+/var/www/html/web_app/index.html
+
+Therefore the existing repository in /var/www/html is used directly.
+
+23. Save the job
+
+Click:
+
+Save
+
+You should now see:
+
+nautilus-webapp-job
+
+on the Jenkins dashboard.
+
+24. First test — master
+
+Click:
+
+Build with Parameters
+
+You should see:
+
+BRANCH
+
+Enter:
+
+master
+
+Click:
+
+Build
+25. Watch the console
+
+Click the build number, for example:
+
+#1
+
+Then:
+
+Console Output
+
+You want to see something resembling:
+
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on App Server 1 ...
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Deploy)
+...
++ cd /var/www/html
++ git fetch origin
++ git checkout master
++ git reset --hard origin/master
+...
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS
+
+The critical things are:
+
+Running on App Server 1
+
+and:
+
+[Deploy]
+
+and finally:
+
+Finished: SUCCESS
+26. Verify the deployment on App Server 1
+
+SSH into App Server 1:
+
+ssh sarah@stapp01
+
+Then:
+
+cd /var/www/html
+
+Check:
+
+git branch
+
+You should see:
+
+* master
+
+Check:
+
+git status
+
+Then:
+
+ls -la
+
+You should see the website files directly inside /var/www/html.
+
+27. Test through the Load Balancer
+
+Open the lab's:
+
+App
+
+button.
+
+The URL should be:
+
+https://<LBR-URL>
+
+The website should load at the root.
+
+Correct
+https://<LBR-URL>/
+Wrong
+https://<LBR-URL>/web_app
+28. Test the feature branch
+
+Now go back to:
+
+nautilus-webapp-job
+
+Click:
+
+Build with Parameters
+
+Set:
+
+BRANCH=feature
+
+Click:
+
+Build
+
+Watch the console.
+
+You should see:
+
+git checkout feature
+
+and:
+
+git reset --hard origin/feature
+
+The result should be:
+
+Finished: SUCCESS
+29. Verify feature branch on App Server 1
+
+SSH into the server:
+
+ssh sarah@stapp01
+
+Then:
+
+cd /var/www/html
+git branch
+
+You should now see:
+
+* feature
+
+Then:
+
+git log -1 --oneline
+
+This confirms the deployed commit.
+
+Refresh the App URL.
+
+You should now see the feature branch's website content.
+
+30. Test switching back to master
+
+This is a particularly useful test.
+
+Run:
+
+Build with Parameters
+
+with:
+
+BRANCH=master
+
+Then verify:
+
+cd /var/www/html
+git branch
+
+It should show:
+
+* master
+
+This proves the conditional deployment is actually working.
+
+31. What the final Jenkins configuration should look like
+
+Your node:
+
+Name:
+App Server 1
+
+Remote root directory:
+/home/sarah/jenkins_agent
+
+Labels:
+stapp01
+
+Launch method:
+Launch agents via SSH
+
+Host:
+stapp01
+
+SSH user:
+sarah
+
+Your job:
+
+Name:
+nautilus-webapp-job
+
+Type:
+Pipeline
+
+Multibranch:
+NO
+
+Parameter:
+
+Name:
+BRANCH
+
+Type:
+String Parameter
+
+Default:
+master
+
+Pipeline:
+
+Definition:
+Pipeline script
+
+And exactly one stage:
+
+Deploy
+32. Screenshots you should take
+
+The task specifically recommends screenshots. I'd take these before finishing the lab.
+
+Screenshot 1 — Node configuration
+
+Show:
+
+App Server 1
+Remote root: /home/sarah/jenkins_agent
+Label: stapp01
+Screenshot 2 — Node online
+
+Show:
+
+App Server 1 [online]
+Screenshot 3 — Job configuration
+
+Show:
+
+nautilus-webapp-job
+Pipeline
+
+and the BRANCH parameter.
+
+Screenshot 4 — Pipeline script
+
+Capture the Jenkinsfile showing:
+
+stage('Deploy')
+
+and:
+
+if (params.BRANCH == 'master')
+
+and:
+
+else if (params.BRANCH == 'feature')
+Screenshot 5 — Successful master build
+
+Console output showing:
+
+Running on App Server 1
+[Deploy]
+
+and:
+
+Finished: SUCCESS
+Screenshot 6 — Successful feature build
+
+Same as above, but showing:
+
+git checkout feature
+Screenshot 7 — Website
+
+Open:
+
+https://<LBR-URL>
+
+and capture the successfully loaded website.
+
+Make sure the browser URL doesn't contain /web_app.
+
+33. One important issue to watch for
+
+Because /var/www/html is already a Git repository, don't use git pull blindly if the lab has potentially modified files.
+
+This:
+
+git fetch origin
+git checkout master
+git reset --hard origin/master
+
+is more deterministic for a lab deployment.
+
+It means:
+
+Make /var/www/html exactly match the selected remote branch.
+
+For a real production system, we'd normally be more careful about uncommitted changes, deployment artifacts, ownership, and rollback. For this KodeKloud-style task, the above is a clean approach.
+
+Final expected result
+
+You should end up with:
+
+Jenkins
+│
+├── nautilus-webapp-job
+│       │
+│       ├── BRANCH=master
+│       │       ↓
+│       │   App Server 1
+│       │       ↓
+│       │   /var/www/html
+│       │       ↓
+│       │   master branch
+│       │
+│       └── BRANCH=feature
+│               ↓
+│           App Server 1
+│               ↓
+│           /var/www/html
+│               ↓
+│           feature branch
+│
+└── Node: App Server 1
+        Label: stapp01
+        Root: /home/sarah/jenkins_agent
+
+And the final website is accessible through:
+
+If you cannot see "Pipeline" when creating a new Jenkins job, you are missing the Pipeline plugin.
+
+Install these plugins:
+
+Required plugin
+
+✅ Pipeline
+
+This is the main plugin that adds:
+
+Pipeline job type
+Jenkinsfile support
+pipeline { } syntax
+Recommended plugins (install together)
+
+Go to:
+
+Manage Jenkins
+   ↓
+Plugins
+   ↓
+Available plugins
+
+Search and install:
+
+Pipeline
+Plugin ID: workflow-aggregator
+This installs the complete Pipeline suite.
+Pipeline: Stage View
+Gives the visual stage display.
+Git plugin
+Needed because your deployment uses Git.
+SSH Build Agents plugin
+Needed for your App Server 1 node.
+Easiest method
+
+In the plugin search box type:
+
+Pipeline
+
+Select:
+
+Pipeline
+
+or:
+
+Pipeline: Groovy
+Pipeline: Model Definition
+Pipeline: Job
+Pipeline: API
+Pipeline: Supporting APIs
+
+But the easiest is:
+
+Pipeline
+
+(the workflow-aggregator plugin).
+
+After installation
+
+When Jenkins finishes installing:
+
+Check:
+Restart Jenkins when installation is complete and no jobs are running
+Refresh your browser.
+Go to:
+Dashboard
+   ↓
+New Item
+
+You should now see:
+
+Freestyle project
+Pipeline   ✅
+Multibranch Pipeline
+Folder
+
+Select:
+
+Pipeline
+
+for:
+
+nautilus-webapp-job
+
+For your xFusionCorp task, do not choose Multibranch Pipeline. You specifically need:
+
+Pipeline
+    |
+    └── nautilus-webapp-job
+
+with the BRANCH string parameter.
+
+Ad
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/  This is the url
+
+I see the URL:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/
+
+This looks like the exposed application URL from the KodeKloud lab, not the Jenkins URL. KodeKloud labs commonly provide temporary "View Port" URLs like this for services running inside the lab environment.
+
+For your Nautilus web app deployment task, this URL is useful only after your Jenkins pipeline successfully deploys the website.
+
+Right now, before checking the URL, verify these things:
+
+1. Check Jenkins agent status first
+
+Your previous error was:
+
+UnsupportedClassVersionError
+class file version 61
+
+You need App Server 1 online first.
+
+In Jenkins:
+
+Manage Jenkins
+   ↓
+Nodes
+   ↓
+App Server 1
+
+It must show:
+
+App Server 1   Online
+2. Run your pipeline
+
+Go to:
+
+nautilus-webapp-job
+        ↓
+Build with Parameters
+
+Set:
+
+BRANCH = master
+
+Run it.
+
+Console should show:
+
+Running on App Server 1
+
+and:
+
+[Deploy]
+
+and:
+
+Finished: SUCCESS
+3. Verify files on App Server 1
+
+SSH:
+
+ssh sarah@stapp01
+
+Check:
+
+cd /var/www/html
+ls -la
+
+You should see your website files:
+
+Example:
+
+index.html
+style.css
+script.js
+.git
+
+NOT:
+
+web_app/index.html
+
+because the task requires the website at the root URL.
+
+4. Check Apache
+
+On App Server 1:
+
+sudo systemctl status httpd
+
+or:
+
+systemctl status httpd
+
+Check port:
+
+ss -ltnp | grep 8080
+
+You should see Apache listening:
+
+*:8080
+5. Test locally from App Server 1
+
+Run:
+
+curl localhost:8080
+
+You should get HTML output.
+
+Example:
+
+<html>
+<head>
+...
+</head>
+</html>
+6. Then open your URL
+
+Open:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/
+
+The page should load.
+
+Important:
+
+✅ Correct:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/
+
+❌ Wrong:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/web_app
+
+If the page does not load, send me:
+
+Output of:
+curl localhost:8080
+
+from stapp01
+
+Jenkins pipeline console output
+Output of:
+ls -la /var/www/html
+
+Then we can pinpoint whether it is Jenkins, Apache, or the load balancer.
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/  =  https://<LBR-URL> is it correct
+
+Yes, that URL is your <LBR-URL> equivalent for this KodeKloud lab. ✅
+
+The task says:
+
+"You should be able to see the latest changes you made by clicking on the App button. Please make sure the required content is loading on the main URL https://<LBR-URL>"
+
+In your lab, KodeKloud exposes the Load Balancer through a temporary URL like:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/
+
+KodeKloud lab "View Port" URLs are generated to expose services running inside the lab environment.
+
+So your mapping is:
+
+Task description:
+https://<LBR-URL>/
+
+Your lab:
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/
+
+✅ Correct.
+
+Now the final check is that the website loads at:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/
+
+NOT:
+
+https://8091-port-pbqcfztf45x2mske.labs.kodekloud.com/web_app
+
+If you see your website homepage at the root URL, your deployment is correct.
+
+If you get:
+
+404 → check /var/www/html
+Apache default page → your Jenkins deployment did not replace the document root
+Connection refused → check Apache/LB backend
+Old content → run the pipeline again with the correct BRANCH
+
+For your current task, the order should be:
+
+✅ App Server 1 node online
+✅ nautilus-webapp-job created
+✅ Run BRANCH=master
+✅ Open your URL above
+✅ Confirm page loads at / root
+
+You are at the final verification stage.
+
+This Jenkins pipeline task represents a real-world CI/CD deployment workflow used by DevOps teams whenever developers push changes to a web application and those changes need to be automatically deployed to servers.
+
+In a real company, this scenario would look like this:
+
+Real-world example
+
+Imagine xFusionCorp Industries has a company website.
+
+Developers are working on a Git repository:
+
+Git Repository
+(web_app)
+        |
+        |
+        v
+Jenkins Pipeline
+        |
+        |
+        v
+Production Web Servers
+(App Servers)
+        |
+        |
+        v
+Users access website
+
+A developer named Sarah modifies the website:
+
+index.html
+style.css
+javascript files
+images
+
+She pushes changes:
+
+git add .
+git commit -m "Update homepage design"
+git push origin master
+
+The DevOps pipeline automatically deploys those changes.
+
+Where this task appears in real life
+1. Website deployments
+
+This is the most direct example.
+
+Companies deploy:
+
+company websites
+customer portals
+dashboards
+landing pages
+e-commerce websites
+
+Example:
+
+A developer updates:
+
+homepage.html
+
+Jenkins automatically:
+
+Connects to the web server
+Pulls the latest code
+Updates /var/www/html
+Restarts services if needed
+Website immediately shows the change
+2. Multiple environments (Development → Testing → Production)
+
+Your task only has:
+
+master
+feature
+
+Real companies usually have:
+
+feature branch
+       |
+       v
+Development environment
+       |
+       v
+Testing/Staging environment
+       |
+       v
+Production
+
+Example:
+
+Developer creates:
+
+feature/new-payment-page
+
+Pipeline deploys it to:
+
+dev.example.com
+
+QA tests it.
+
+After approval:
+
+main/master
+
+deploys to:
+
+www.example.com
+3. Blue-Green deployments
+
+Large companies avoid directly changing production servers.
+
+Instead:
+
+                 Load Balancer
+
+                    |
+        ---------------------------
+        |                         |
+    Blue Server              Green Server
+    Current Version          New Version
+
+Pipeline:
+
+Deploys new code to Green
+Tests it
+Switches the load balancer
+Users now see the new version
+
+Your task uses a load balancer:
+
+User
+ |
+ v
+LBR
+ |
+ +---- App Server 1
+ +---- App Server 2
+ +---- App Server 3
+
+This is the same concept on a smaller scale.
+
+4. Scaling web applications
+
+Your previous KodeKloud tasks with:
+
+stapp01
+stapp02
+stapp03
+
+represent production scaling.
+
+Real companies might have:
+
+Load Balancer
+
+     |
+ -----------------
+ |       |       |
+Web1    Web2    Web3
+
+The pipeline deploys the same version everywhere:
+
+Jenkins
+ |
+ +-- Web Server 1
+ |
+ +-- Web Server 2
+ |
+ +-- Web Server 3
+5. Emergency hotfix deployments
+
+Example:
+
+A company discovers:
+
+Payment button is broken
+
+Developer creates:
+
+hotfix/payment-error
+
+The DevOps engineer runs:
+
+BRANCH=hotfix/payment-error
+
+Pipeline deploys only that fix.
+
+6. Infrastructure automation
+
+The same pattern applies beyond websites.
+
+Application deployment
+
+Example:
+
+Spring Boot application:
+
+GitHub
+ |
+ Jenkins
+ |
+ Docker build
+ |
+ AWS ECS
+Kubernetes deployment
+
+Modern companies do:
+
+Developer
+   |
+ Git push
+   |
+ Jenkins/GitHub Actions
+   |
+ Docker Image
+   |
+ Kubernetes Cluster
+   |
+ Users
+
+Instead of:
+
+/var/www/html
+
+you deploy:
+
+kubectl apply -f deployment.yaml
+Mapping your task to a real DevOps workflow
+KodeKloud Task	Real Company Equivalent
+Gitea repository	GitHub/GitLab/Bitbucket
+Jenkins server	CI/CD platform
+Jenkins agent	Build/deployment worker
+App Server 1	Production web server
+/var/www/html	Web application directory
+BRANCH parameter	Deployment environment/version selector
+Load Balancer	AWS ALB/Nginx/HAProxy
+Apache	Web server
+Pipeline stage Deploy	Automated deployment process
+What a senior DevOps engineer would improve in production
+
+Your lab solution is intentionally simple. A production pipeline would usually add:
+
+1. Automated testing
+
+Before deployment:
+
+stage('Test') {
+    sh './run-tests.sh'
+}
+2. Build artifacts
+
+Instead of pulling directly:
+
+Git
+ |
+Build
+ |
+Artifact Repository
+ |
+Deploy
+
+Examples:
+
+Nexus
+JFrog Artifactory
+AWS S3
+3. Security scanning
+
+Add:
+
+SonarQube
+Trivy
+Snyk
+
+Example:
+
+Code
+ |
+Security Scan
+ |
+Deploy
+4. Approval gates
+
+Production deployments often require:
+
+Developer
+    |
+ Jenkins
+    |
+ QA Approval
+    |
+ Manager Approval
+    |
+ Production
+5. Rollback
+
+If deployment fails:
+
+Version 2 ❌
+
+Rollback
+
+Version 1 ✅
+In a DevOps interview, this task demonstrates that you understand:
+
+✅ Jenkins pipeline creation
+✅ CI/CD concepts
+✅ Git branch deployment
+✅ Jenkins agents
+✅ Remote execution
+✅ Web server deployment
+✅ Load-balanced architecture
+✅ Production deployment flow
+
+This is exactly the type of workflow a Junior/Mid-level DevOps Engineer would automate in a real company.
+
+https://<LBR-URL>/
+
+with no /web_app subdirectory.
