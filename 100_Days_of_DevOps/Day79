@@ -1,0 +1,212 @@
+The Nautilus development team had a meeting with the DevOps team where they discussed automating the deployment of one of their apps using Jenkins (the one in Stratos Datacenter). They want to auto deploy the new changes in case any developer pushes to the repository. As per the requirements mentioned below configure the required Jenkins job.
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and Adm!n321 password.
+Similarly, you can access the Gitea UI using Gitea button. Username and password for Git are sarah and Sarah_pass123. Under user sarah you will find a repository named web that is already cloned on App Server 1 under sarah's home (/home/sarah/web). sarah is a developer who is working on this repository.
+1. httpd is already installed and configured on the app server (listening on port 8080). Ensure the httpd service is running on App Server 1 (e.g. start it manually if needed). You can make starting/restarting httpd part of your Jenkins job if you prefer.
+2. Create a Jenkins job named nautilus-app-deployment and configure it so that if anyone pushes any new change to the origin repository in master branch, the job should auto build and deploy the latest code on App Server 1 under /var/www/html directory.
+Before deployment, ensure that the ownership of the /var/www/html directory is set to user sarah, so that Jenkins can successfully deploy files to that directory.
+3. SSH into App Server 1 using sarah user credentials mentioned above. Under sarah user's home (/home/sarah/web) you will find a cloned Git repository named web. Under this repository there is an index.html file, update its content to Welcome to the xFusionCorp Industries, then push the changes to the origin into master branch. This push must trigger your Jenkins job and the latest changes must be deployed on the server, also make sure it deploys the entire repository content not only index.html file.
+Click on the App button on the top bar to access the app. Please make sure the required content is loading on the main URL (e.g. http://stlb01:8091) i.e there should not be any sub-directory like http://stlb01:8091/web etc.
+
+Note:
+1. You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. Also some times Jenkins UI gets stuck when Jenkins service restarts in the back end so in such case please make sure to refresh the UI page.
+2. Make sure Jenkins job passes even on repetitive runs as validation may try to build the job multiple times.
+3. Deployment related tasks should be done by sudo user on the destination server to avoid any permission issues so make sure to configure your Jenkins job accordingly.
+4. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. You may also consider using a screen recording software such as loom.com to record and share your work. The last task failed. Give me a step by tsep guide from the begonning for this task
+
+Solution
+Complete Step-by-Step Guide for Jenkins Automation Deployment
+Based on the requirements, here's a fresh start-to-finish guide for the nautilus-app-deployment job.
+
+Phase 1: Initial Setup on App Server 1
+Step 1: SSH into App Server 1
+bash
+ssh sarah@stapp01
+# Password: Sarah_pass123
+Step 2: Start httpd Service
+bash
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl status httpd
+Step 3: Set Proper Ownership for Web Directory
+bash
+sudo chown -R sarah:sarah /var/www/html/
+sudo chmod -R 755 /var/www/html/
+Step 4: Update and Push Initial Content
+bash
+cd /home/sarah/web
+echo "Welcome to the xFusionCorp Industries" > index.html
+git add index.html
+git commit -m "Updated index.html content"
+git push origin master
+# Password: Sarah_pass123
+Phase 2: Jenkins Setup
+Step 5: Access Jenkins
+Click the Jenkins button on the top bar
+
+Login with:
+
+Username: admin
+
+Password: Adm!n321
+
+Step 6: Install Required Plugins
+Go to Manage Jenkins > Plugins
+
+Click Available tab
+
+Search and install:
+
+Gitea Plugin
+
+Generic Webhook Trigger Plugin
+
+Check Restart Jenkins when installation is complete
+
+Wait for restart and refresh the page
+
+Phase 3: Create and Configure Jenkins Job
+Step 7: Create New Job
+Click New Item
+
+Enter name: nautilus-app-deployment
+
+Select Freestyle project
+
+Click OK
+
+Step 8: Configure Source Code Management
+Under Source Code Management, select Git
+
+Repository URL:
+
+text
+https://3000-port-vveyvbeaa2s3rkl2.labs.kodekloud.com/sarah/web.git
+Credentials: Click Add > Jenkins
+
+Kind: Username with password
+
+Username: sarah
+
+Password: Sarah_pass123
+
+ID: sarah-credentials
+
+Click Add
+
+Select the credentials from dropdown
+
+Branches to build: */master
+
+Step 9: Configure Build Triggers (Webhook + Polling)
+Option A: Generic Webhook Trigger (Recommended)
+Under Build Triggers, check Generic Webhook Trigger
+
+Token: my-secret-token
+
+Option B: Poll SCM (Fallback)
+Check Poll SCM
+
+Schedule: H/2 * * * *
+
+Step 10: Add Deployment Build Steps
+Under Build, click Add build step > Execute shell
+
+Copy and paste this script:
+
+bash
+# Copy all files to App Server 1 (disable host key checking)
+scp -o StrictHostKeyChecking=no -r * sarah@stapp01:/tmp/
+
+# Move files to web directory with sudo
+ssh -o StrictHostKeyChecking=no sarah@stapp01 "sudo rm -rf /var/www/html/* && sudo cp -r /tmp/* /var/www/html/"
+
+# Set proper ownership
+ssh -o StrictHostKeyChecking=no sarah@stapp01 "sudo chown -R sarah:sarah /var/www/html/"
+
+# Set correct permissions
+ssh -o StrictHostKeyChecking=no sarah@stapp01 "sudo chmod -R 755 /var/www/html/"
+
+# Restart httpd
+ssh -o StrictHostKeyChecking=no sarah@stapp01 "sudo systemctl restart httpd"
+
+# Clean up temporary files
+ssh -o StrictHostKeyChecking=no sarah@stapp01 "sudo rm -rf /tmp/*"
+Click Save
+
+Phase 4: Configure Gitea Webhook
+Step 11: Access Gitea
+Click the Gitea button on the top bar
+
+Login with:
+
+Username: sarah
+
+Password: Sarah_pass123
+
+Step 12: Create Webhook
+Navigate to your web repository
+
+Click Settings > Webhooks
+
+Click Add Webhook > Gitea
+
+Step 13: Fill Webhook Form
+Field	Value
+Target URL	https://8080-port-vveyvbeaa2s3rkl2.labs.kodekloud.com/generic-webhook-trigger/invoke?token=my-secret-token
+HTTP Method	POST
+POST Content Type	application/json
+Authorization Header	(Leave blank)
+Secret	(Leave blank)
+Branch filter	master
+Trigger On	☑️ Push Events (only)
+Click Add Webhook
+
+Phase 5: Test the Complete Pipeline
+Step 14: Manual Test
+In Jenkins, click Build Now on your job
+
+Check console output for success
+
+Verify deployment:
+
+bash
+ssh sarah@stapp01
+cat /var/www/html/index.html
+# Should show: Welcome to the xFusionCorp Industries
+Step 15: Webhook Test
+On App Server 1, make a change:
+
+bash
+cd /home/sarah/web
+echo "Welcome to the xFusionCorp Industries - Auto Deployed!" > index.html
+git add index.html
+git commit -m "Test webhook trigger"
+git push origin master
+Check Jenkins - a new build should start automatically (within 2 minutes via Poll SCM, or immediately via webhook)
+
+Verify content at: http://stlb01:8091
+
+Phase 6: Verification
+Step 16: Check Web Application
+Click the App button on the top bar
+
+The URL should be http://stlb01:8091
+
+The page should display: Welcome to the xFusionCorp Industries
+
+Step 17: Validate Requirements
+☑ httpd running on port 8080
+☑ Job name: nautilus-app-deployment
+☑ Auto-triggered on push to master branch
+☑ Deploys to /var/www/html
+☑ Ownership set to sarah
+☑ Entire repository deployed (not just index.html)
+☑ Content loads on main URL (no subdirectory)
+Troubleshooting Common Issues
+Issue	Solution
+Host key verification failed	Use -o StrictHostKeyChecking=no in SCP/SSH commands
+Permission denied	Run sudo chown -R sarah:sarah /var/www/html/
+Webhook not triggering	Verify Target URL and token match Jenkins configuration
+httpd not serving content	Check SELinux: sudo setenforce 0 (temporary)
+SCP/SSH password prompt	Ensure credentials are properly configured in Jenkins
+
