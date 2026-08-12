@@ -1,0 +1,387 @@
+The DevOps team was looking for a solution where they want to restart Apache service on all app servers if the deployment goes fine on these servers in Stratos Datacenter. 
+After having a discussion, they came up with a solution to use Jenkins chained builds so that they can use a downstream job for services which should only be triggered by the deployment job. 
+So as per the requirements mentioned below configure the required Jenkins jobs. 
+Click on the Jenkins button on the top bar to access the Jenkins UI. 
+Login using username admin and Adm!n321 password. 
+Similarly you can access Gitea UI on port 3000 (or click the Gitea button) and username and password for Git is sarah and Sarah_pass123 respectively. 
+Under user sarah you will find a repository named web. Apache is already installed and configured on the app server. 
+The doc root /var/www/html on App Server 1 is a local git repository tracking the origin web repository. 
+1. Create a Jenkins job named devops-app-deployment and configure it to pull changes from the master branch of the web repository on App Server 1 under /var/www/html directory. 
+2. Create another Jenkins job named manage-services and make it a downstream job for devops-app-deployment. 
+Things to take care about this job are: 
+a. This job should restart httpd service on the app server (App Server 1). 
+b. Trigger this job only if the upstream job i.e devops-app-deployment is stable. The LB server is already configured. Click on the App button on the top bar to access the app. P
+lease make sure the required content is loading on the main URL (e.g. http://stlb01:8091) i.e there should not be a sub-directory like http://stlb01:8091/web etc. 
+Note: 1. You might need to install some plugins and restart Jenkins service. 
+So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. 
+Also some times Jenkins UI gets stuck when Jenkins service restarts in the back end so in such case please make sure to refresh the UI page. 
+2. Make sure Jenkins job passes even on repetitive runs as validation may try to build the job multiple times. 
+3. Deployment related tasks should be done by sudo user on the destination server to avoid any permission issues so make sure to configure your Jenkins job accordingly. 
+4. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. 
+You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Yes. In your KodeKloud/Stratos setup, the easiest approach is to use the Jenkins agent already connected to stapp01, rather than having Jenkins SSH into stapp01 again.
+
+From your earlier setup, you had Jenkins connected to App Server 1 as sarah, with the workspace under /home/sarah/jenkins_agent. We can use that.
+
+Step 1 — Check the Jenkins node
+In Jenkins go to:
+
+Manage Jenkins → Nodes → App Server 1
+
+Check that it is:
+
+Online
+and that its label is:
+
+stapp01
+If it is online, open your devops-app-deployment job.
+
+Step 2 — Tell the job to run on App Server 1
+Go to:
+
+devops-app-deployment → Configure
+
+Under General, enable:
+
+Restrict where this project can be run
+
+Enter:
+
+stapp01
+This means the build will execute directly on App Server 1.
+
+Step 3 — Deploy into /var/www/html
+Under Build Steps, choose:
+
+Execute shell
+
+Use:
+
+cd /var/www/html
+
+git fetch origin
+git reset --hard origin/master
+
+echo "Deployment completed successfully"
+Do not use:
+
+git clone http://gitea:3000/sarah/web.git /var/www/html/web
+because that creates:
+
+/var/www/html/web/
+which is exactly what the task says not to do.
+
+Instead, /var/www/html itself should remain the Git working directory.
+
+Step 4 — Check what currently exists
+Before running the Jenkins job, SSH into stapp01 and check:
+
+cd /var/www/html
+ls -la
+Then:
+
+git status
+You should see that /var/www/html is already a Git repository.
+
+Check:
+
+git remote -v
+You should have something similar to:
+
+origin  http://gitea:3000/sarah/web.git (fetch)
+origin  http://gitea:3000/sarah/web.git (push)
+Then:
+
+git branch
+You want:
+
+* master
+Step 5 — Test the deployment manually
+On stapp01:
+
+cd /var/www/html
+git fetch origin
+git reset --hard origin/master
+Then:
+
+ls -la /var/www/html
+If the repository contains index.html, you should have:
+
+/var/www/html/index.html
+Check:
+
+test -f /var/www/html/index.html && echo "index.html exists"
+You want:
+
+index.html exists
+But what about sudo?
+This is the part that can be confusing.
+
+The deployment itself is:
+
+git fetch
+git reset
+The task's note says deployment-related operations should be performed by a sudo-capable user to avoid permissions problems.
+
+First check which user your Jenkins agent is using.
+
+In the Jenkins job, temporarily use:
+
+whoami
+pwd
+sudo -n whoami
+Build the job.
+
+If the output is:
+
+sarah
+/home/sarah/jenkins_agent/workspace/devops-app-deployment
+root
+then sarah can use sudo without being prompted for a password. That's ideal.
+
+If you get:
+
+sudo: a password is required
+then we need to fix sudo access for the Jenkins account.
+
+Step 6 — Make sure /var/www/html is writable
+On stapp01, run:
+
+ls -ld /var/www/html
+and:
+
+ls -la /var/www/html
+If the repository is owned by sarah, you may see something like:
+
+sarah sarah /var/www/html
+Then Jenkins running as sarah can update it directly.
+
+If instead you see:
+
+root root /var/www/html
+then Git operations may fail with:
+
+permission denied
+In that case, because the lab specifically wants sudo-capable deployment, you can test:
+
+cd /var/www/html
+sudo git fetch origin
+sudo git reset --hard origin/master
+But don't immediately change ownership or permissions. First show me the output of:
+
+whoami
+ls -ld /var/www/html
+git -C /var/www/html remote -v
+sudo -n whoami
+Those four outputs will tell us exactly how your current stapp01 Jenkins setup is configured.
+
+The desired final state
+You want:
+
+stapp01
+└── /var/www/html
+    ├── index.html
+    ├── ...
+    └── .git
+Not:
+
+stapp01
+└── /var/www/html
+    └── web
+        ├── index.html
+        └── ...
+And your Jenkins job should run on the App Server 1 node, update the existing repository in /var/www/html, then trigger manage-services only after a stable deployment.
+
+
+Perfect. ✅ The Jenkins chained-build requirement is now working correctly.
+
+Your log proves all the important requirements:
+
+Started by upstream project "devops-app-deployment" build number 3
+This confirms manage-services is being triggered by the deployment job, not manually.
+
+Then:
+
++ sudo systemctl restart httpd
++ sudo systemctl is-active httpd
+active
+This confirms Apache was successfully restarted on App Server 1 (stapp01).
+
+And finally:
+
+Finished: SUCCESS
+Your final setup
+Gitea
+  │
+  │ sarah/web
+  │ master
+  ▼
+devops-app-deployment
+  │
+  │ SUCCESS / STABLE
+  ▼
+manage-services
+  │
+  ├── sudo systemctl restart httpd
+  └── sudo systemctl is-active httpd
+              │
+              ▼
+           active
+One final validation
+Open the application through the load balancer:
+
+http://stlb01:8091
+Make sure the application loads directly at:
+
+http://stlb01:8091
+and not:
+
+http://stlb01:8091/web
+Also, because the task specifically asks for screenshots for review, take screenshots of:
+
+devops-app-deployment configuration showing the Git repository/master branch.
+
+devops-app-deployment → Post-build Actions showing manage-services and Trigger only if build is stable.
+
+Successful devops-app-deployment console output.
+
+Successful manage-services console output showing:
+
+active
+The application loaded at http://stlb01:8091.
+
+At this point, I would not change anything else in Jenkins. The core task is complete.
+
+
+Hmmm… can't reach this page
+Check if there is a typo in stlb01.
+
+Search the web for stlb01
+DNS_PROBE_FINISHED_NXDOMAIN
+
+That error is not an Apache/Jenkins problem. DNS_PROBE_FINISHED_NXDOMAIN means your personal Windows browser cannot resolve stlb01.
+
+In KodeKloud, the Stratos server names such as stlb01 are normally resolvable inside the lab network, not from your local Windows machine. KodeKloud documentation/community examples also show that Stratos hostnames are intended to be accessed from within the lab/jump-host environment. 
+
+Do this instead
+From the KodeKloud terminal/jump host, test:
+
+curl -I http://stlb01:8091
+Then:
+
+curl http://stlb01:8091
+If that returns your HTML, your application/LB is working.
+
+You can also test from stapp01:
+
+curl -I http://stlb01:8091
+If curl fails
+From stapp01, run:
+
+getent hosts stlb01
+Then:
+
+curl -v http://stlb01:8091
+Also check Apache:
+
+sudo systemctl status httpd
+and:
+
+curl http://localhost
+Important
+Don't try to fix this by adding stlb01 to your Windows hosts file yet. First establish that the LB works from inside the KodeKloud environment.
+
+The task specifically says the LB is already configured, so we should not modify the LB configuration unless the internal curl test proves it is actually broken.
+
+Send me the output of:
+
+curl -I http://stlb01:8091
+from stapp01.
+
+
+thor@jumphost ~$ curl -I http://stlb01:8091
+HTTP/1.1 200 OK
+date: Wed, 12 Aug 2026 06:42:12 GMT
+server: Apache/2.4.62 (CentOS Stream)
+last-modified: Wed, 12 Aug 2026 06:27:53 GMT
+etag: "16-658d3aff3144d"
+accept-ranges: bytes
+content-length: 22
+content-type: text/html; charset=UTF-8
+
+thor@jumphost ~$ curl http://stlb01:8091
+Welcome to KodeKloud!
+thor@jumphost ~$ 
+
+Excellent — the application/LB is working correctly. ✅
+
+Your test proves:
+
+HTTP/1.1 200 OK
+and:
+
+Welcome to KodeKloud!
+So the problem is only that your local Windows browser cannot resolve stlb01. It is not a Jenkins, Apache, or load-balancer failure.
+
+Your task is essentially complete
+You have verified:
+
+✅ Jenkins agent connected to stapp01
+
+✅ devops-app-deployment runs on App Server 1
+
+✅ Git repository is sarah/web
+
+✅ master is deployed
+
+✅ Content is directly under /var/www/html
+
+✅ /var/www/html/index.html exists
+
+✅ devops-app-deployment succeeds
+
+✅ manage-services is triggered by the upstream job
+
+✅ Downstream trigger occurs after successful/stable deployment
+
+✅ sudo systemctl restart httpd works
+
+✅ Apache reports active
+
+✅ LB responds on stlb01:8091
+
+✅ Application returns Welcome to KodeKloud!
+
+Why your browser fails
+Your Windows browser is outside the lab's internal DNS/network, so:
+
+http://stlb01:8091
+cannot be resolved locally.
+
+The fact that this works:
+
+thor@jumphost ~$ curl http://stlb01:8091
+Welcome to KodeKloud!
+is the important validation.
+
+For your screenshot
+Since the task specifically recommends screenshots, take a screenshot of the Jumphost terminal showing:
+
+curl http://stlb01:8091
+Welcome to KodeKloud!
+Also take screenshots of:
+
+devops-app-deployment → configuration
+
+devops-app-deployment → successful build
+
+manage-services → downstream configuration
+
+manage-services → successful build showing active
+
+Jumphost → curl http://stlb01:8091
+
+I would submit the task now rather than changing the LB. Your internal validation is returning HTTP 200 and the expected page content.
+
+
