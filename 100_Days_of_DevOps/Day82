@@ -1,0 +1,35 @@
+The Nautilus DevOps team is testing Ansible playbooks on various servers within their stack. They've placed some playbooks under /home/thor/playbook/ directory on the jump host and now intend to test them on app server 3 in Stratos DC. However, an inventory file needs creation for Ansible to connect to the respective app. Here are the requirements:
+a. Create an ini type Ansible inventory file /home/thor/playbook/inventory on jump host.
+b. Include App Server 3 in this inventory along with necessary variables for proper functionality.
+c. Ensure the inventory hostname corresponds to the server name as per the wiki, for example stapp01 for app server 1 in Stratos DC.
+
+Note: Validation will execute the playbook using the command ansible-playbook -i inventory playbook.yml. Ensure the playbook functions properly without any extra arguments.
+his is a straightforward KodeKloud Ansible inventory task.
+
+Step 1: SSH to the jump host
+ssh thor@jump_host
+Step 2: Create the inventory file
+cd /home/thor/playbook
+vi inventory
+Step 3: Add App Server 3
+
+Use the INI format:
+
+[app]
+stapp03 ansible_host=172.16.238.12 ansible_user=banner ansible_ssh_pass=Banner@BigGr33n ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+The inventory hostname must be stapp03, as required by the lab.
+
+Step 4: Save and verify
+ansible -i inventory app -m ping
+
+Expected output:
+
+stapp03 | SUCCESS => {
+    "ping": "pong"
+}
+
+The validator will then run:
+
+cd /home/thor/playbook
+ansible-playbook -i inventory playbook.yml
