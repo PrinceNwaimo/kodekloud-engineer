@@ -1,0 +1,77 @@
+An Ansible playbook needs completion on the jump host, where a team member left off. Below are the details:
+The inventory file /home/thor/ansible/inventory requires adjustments. The playbook must run on App Server 1 in Stratos DC. Update the inventory accordingly.
+Create a playbook /home/thor/ansible/playbook.yml. Include a task to create an empty file /tmp/file.txt on App Server 1.
+
+Note: Validation will run the playbook using the command ansible-playbook -i inventory playbook.yml. Ensure the playbook works without any additional arguments.
+
+SOLUTION
+1. Go to the Ansible directory
+cd /home/thor/ansible
+2. Check the inventory
+cat inventory
+
+Set it so App Server 1 is in the inventory. In these KodeKloud labs, App Server 1 is typically stapp01.
+
+A simple inventory is:
+
+[app]
+stapp01
+
+If the existing inventory already contains the correct hostname/IP and credentials, keep those details and just ensure stapp01 belongs to a group used by the playbook.
+
+3. Create playbook.yml
+---
+- name: Create file on App Server 1
+  hosts: app
+  become: yes
+
+
+  tasks:
+    - name: Create empty file
+      ansible.builtin.file:
+        path: /tmp/file.txt
+        state: touch
+4. Test the inventory
+ansible -i inventory app -m ping
+
+You should get:
+
+stapp01 | SUCCESS => ...
+5. Run exactly as the validator will
+ansible-playbook -i inventory playbook.yml
+
+Then verify:
+
+ansible -i inventory app -m shell -a "ls -l /tmp/file.txt"
+
+You should see /tmp/file.txt.
+
+Yes — your current inventory is pointing to App Server 3 (stapp03), but the task requires App Server 1.
+
+Replace the inventory with stapp01.
+
+cd /home/thor/ansible
+
+
+cat > inventory <<'EOF'
+[app]
+stapp01 ansible_user=banner ansible_ssh_pass=$pwd ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+EOF
+
+Then check it:
+
+cat inventory
+
+You should see:
+
+[app]
+stapp01 ansible_user=banner ansible_ssh_pass=$pwd ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+One important issue: $pwd is currently literal text in the inventory. If pwd is actually an environment variable containing the password, Ansible inventory does not expand $pwd automatically.
+
+First test:
+
+ansible -i inventory app -m ping
+
+
+Important: The playbook uses hosts: app, so the inventory group must be named app. This also ensures the validator's exact command works without additional arguments.
