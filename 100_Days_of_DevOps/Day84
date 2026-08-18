@@ -1,0 +1,229 @@
+The Nautilus DevOps team needs to copy data from the jump host to all application servers in Stratos DC using Ansible. Execute the task with the following details:
+a. Create an inventory file /home/thor/ansible/inventory on jump_host and add all application servers as managed nodes.
+b. Create a playbook /home/thor/ansible/playbook.yml on the jump host to copy the /usr/src/finance/index.html file to all application servers, placing it at /opt/finance.
+
+Note: Validation will run the playbook using the command ansible-playbook -i inventory playbook.yml. Ensure the playbook functions properly without any extra arguments.
+
+SOLUTION
+Yes. This is a straightforward Ansible copy task. Since validation runs from /home/thor/ansible with no extra arguments, make sure the inventory and playbook are exactly there.
+
+1. Create the inventory
+
+On the jump host:
+
+mkdir -p /home/thor/ansible
+cd /home/thor/ansible
+nano inventory
+
+Add the three application servers:
+
+[app]
+stapp01
+stapp02
+stapp03
+
+Save and exit.
+
+2. Create the playbook
+nano /home/thor/ansible/playbook.yml
+
+Use:
+
+---
+- name: Copy finance index file to application servers
+  hosts: app
+  become: true
+  tasks:
+    - name: Copy index.html to /opt/finance
+      ansible.builtin.copy:
+        src: /usr/src/finance/index.html
+        dest: /opt/finance/index.html
+
+Important: src is on the jump host, because copy transfers the source file from the Ansible controller to the managed nodes.
+
+3. Verify the source file exists
+
+On the jump host:
+
+ls -l /usr/src/finance/index.html
+4. Test the inventory
+cd /home/thor/ansible
+ansible -i inventory app -m ping
+
+You should get SUCCESS for:
+
+stapp01
+stapp02
+stapp03
+5. Run exactly as the validator will
+ansible-playbook -i inventory playbook.yml
+
+You should see all three servers complete successfully.
+
+6. Optional verification
+ansible -i inventory app -m shell -a "ls -l /opt/finance/index.html"
+
+The key point is that the destination should be:
+
+/opt/finance/index.html
+The problem is SSH authentication, not your playbook.
+
+Ansible is trying to connect as:
+
+thor@stapp01
+thor@stapp02
+thor@stapp03
+
+and thor does not have the required SSH credentials on those servers.
+
+In these Nautilus labs, the application servers normally use their own user accounts. We need to identify the correct SSH user/credentials.
+
+1. Check the lab's server users
+
+From the jump host, try:
+
+ssh stapp01
+
+If that fails, try the common lab user:
+
+ssh tony@stapp01
+
+Then:
+
+ssh steve@stapp02
+ssh banner@stapp03
+
+For this particular Stratos setup, the application-server users are commonly:
+
+stapp01 → tony
+stapp02 → steve
+stapp03 → banner
+2. Update your inventory
+
+If those users work, change /home/thor/ansible/inventory to:
+
+[app]
+stapp01 ansible_user=tony
+stapp02 ansible_user=steve
+stapp03 ansible_user=banner
+
+Then test:
+
+cd /home/thor/ansible
+ansible -i inventory app -m ping
+
+You want:
+
+stapp01 | SUCCESS
+stapp02 | SUCCESS
+stapp03 | SUCCESS
+3. Then run the playbook
+
+Once ping works:
+
+ansible-playbook -i inventory playbook.yml
+
+Don't change the playbook yet. The current failure happens before Ansible even reaches the playbook task.
+
+If the SSH commands above ask for passwords or fail, paste the result of:
+
+cat /home/thor/ansible/inventory
+
+and:
+
+ssh stapp01
+
+and I'll tell you exactly what to put in the inventory.
+
+thor@jump-host ~/ansible$ ssh tony@stapp01
+tony@stapp01's password: 
+[tony@stapp01 ~]$ exit
+logout
+Connection to stapp01 closed.
+thor@jump-host ~/ansible$ nano inventory
+thor@jump-host ~/ansible$ ansible -i inventory app -m ping
+stapp01 | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to connect to the host via ssh: tony@stapp01: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).",
+    "unreachable": true
+}
+stapp02 | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to connect to the host via ssh: steve@stapp02: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).",
+    "unreachable": true
+}
+stapp03 | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to connect to the host via ssh: banner@stapp03: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).",
+    "unreachable": true
+}
+
+Exactly — now we know the usernames are correct. The issue is that SSH works interactively with a password, but Ansible is not being given that password.
+
+In these labs, the easiest solution is to put the SSH password in the inventory using ansible_password.
+
+1. Find the passwords
+
+You need the passwords for the three application-server users. The lab usually provides them in the task/server information.
+
+Your inventory should look like:
+
+[app]
+stapp01 ansible_user=tony ansible_password=TONY_PASSWORD
+stapp02 ansible_user=steve ansible_password=STEVE_PASSWORD
+stapp03 ansible_user=banner ansible_password=BANNER_PASSWORD
+
+Replace the three placeholders with the actual passwords.
+
+2. Test it
+
+Then run:
+
+cd /home/thor/ansible
+ansible -i inventory app -m ping
+
+You should get:
+
+stapp01 | SUCCESS => {
+    ...
+    "ping": "pong"
+}
+stapp02 | SUCCESS => {
+    ...
+    "ping": "pong"
+}
+stapp03 | SUCCESS => {
+    ...
+    "ping": "pong"
+}
+3. Run the required playbook
+
+Once ping succeeds:
+
+ansible-playbook -i inventory playbook.yml
+
+Your existing playbook is fine:
+
+---
+- name: Copy finance index file to application servers
+  hosts: app
+  become: true
+  tasks:
+    - name: Copy index.html to /opt/finance
+      ansible.builtin.copy:
+        src: /usr/src/finance/index.html
+        dest: /opt/finance/index.html
+Important
+
+If you don't know the passwords, don't guess them. Run:
+
+ssh tony@stapp01
+
+and use the password provided by the Nautilus/KodeKloud lab credentials. Do the same for steve and banner.
+
+Once you have those passwords, put them in inventory, and the validator can run:
+
+ansible-playbook -i inventory playbook.yml
+
+without requiring any extra arguments.
+and the playbook must not require --extra-vars, -u, or any other additional arguments.
