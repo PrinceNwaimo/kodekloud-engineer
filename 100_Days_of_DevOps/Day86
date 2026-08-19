@@ -1,0 +1,60 @@
+The Nautilus DevOps team is planning to test several Ansible playbooks on different app servers in Stratos DC. Before that, some pre-requisites must be met. Essentially, the team needs to set up a password-less SSH connection between Ansible controller and Ansible managed nodes. One of the tickets is assigned to you; please complete the task as per details mentioned below:
+a. Jump host is our Ansible controller, and we are going to run Ansible playbooks through thor user from jump host.
+b. There is an inventory file /home/thor/ansible/inventory on jump host. Using that inventory file test Ansible ping from jump host to App Server 2, make sure ping works
+
+Solution
+Yes. The goal is to make sure thor on the Jump host can SSH to App Server 2 without a password, then verify it through the existing inventory.
+
+Since you’re already on the Jump host, do this in order:
+
+1. Check the existing inventory
+cat /home/thor/ansible/inventory
+
+You should see an entry for stapp02 (App Server 2), likely with connection details such as:
+
+[app]
+stapp02 ansible_host=stapp02 ansible_user=<user>
+2. Check whether thor already has an SSH key
+ls -la /home/thor/.ssh/
+
+If you don't have a private key such as id_rsa, create one:
+
+ssh-keygen -t rsa -N "" -f /home/thor/.ssh/id_rsa
+
+Just press Enter if prompted for anything else.
+
+3. Copy the public key to App Server 2
+
+First determine the SSH user from the inventory:
+
+grep -n "stapp02" /home/thor/ansible/inventory
+
+Then use:
+
+ssh-copy-id <user>@stapp02
+
+For example, if the inventory says the user is tony:
+
+ssh-copy-id tony@stapp02
+
+Enter the App Server 2 password when prompted. This is only needed once.
+
+4. Test password-less SSH
+ssh <user>@stapp02
+
+If it logs in without asking for a password, exit:
+
+exit
+5. Run the required Ansible ping
+
+Use the inventory exactly as the ticket specifies:
+
+cd /home/thor/ansible
+ansible -i inventory stapp02 -m ping
+
+A successful result should look approximately like:
+
+stapp02 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
