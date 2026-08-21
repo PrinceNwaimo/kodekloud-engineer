@@ -1,0 +1,85 @@
+An Ansible playbook needs completion on the jump host, where a team member left off. Below are the details:
+The inventory file /home/thor/ansible/inventory requires adjustments. The playbook must run on App Server 1 in Stratos DC. Update the inventory accordingly.
+Create a playbook /home/thor/ansible/playbook.yml. Include a task to create an empty file /tmp/file.txt on App Server 1.
+
+Note: Validation will run the playbook using the command ansible-playbook -i inventory playbook.yml. Ensure the playbook works without any additional arguments.
+
+SOLUTION
+
+You need two files on the jump host. Since validation runs from /home/thor/ansible, use the following.
+
+1. Check/update the inventory
+
+App Server 1 is stapp01. Your inventory should contain:
+
+[app]
+stapp01
+
+If the existing inventory already has connection variables, keep them and only make sure stapp01 is the target host.
+
+2. Create /home/thor/ansible/playbook.yml
+---
+- name: Create file on App Server 1
+  hosts: stapp01
+  become: true
+  tasks:
+    - name: Create empty file
+      ansible.builtin.file:
+        path: /tmp/file.txt
+        state: touch
+        mode: '0644'
+3. Test it
+cd /home/thor/ansible
+ansible -i inventory stapp01 -m ping
+ansible-playbook -i inventory playbook.yml
+
+Then verify:
+
+ssh stapp01 "ls -l /tmp/file.txt"
+
+You should see /tmp/file.txt on App Server 1 (stapp01).
+
+Ad
+hor@jump-host ~/ansible$ cat inventory
+stapp03 ansible_user=banner ansible_ssh_pass=$pwd ansible_ssh_common_args='-o StrictHostKeyChecking=no'thor@jump-host ~/ansible$ 
+
+Yes — your current inventory is targeting stapp03, but the task requires App Server 1 = stapp01.
+
+Also, your line is missing a space before the end of the ansible_ssh_common_args value.
+
+Replace the inventory with:
+
+stapp01 ansible_user=banner ansible_ssh_pass=$pwd ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+Then check:
+
+cat inventory
+
+You should get:
+
+stapp01 ansible_user=banner ansible_ssh_pass=$pwd ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+Now test connectivity:
+
+ansible -i inventory stapp01 -m ping
+
+If that succeeds, create the playbook:
+
+cat > playbook.yml <<'EOF'
+---
+- name: Create file on App Server 1
+  hosts: stapp01
+  become: true
+  tasks:
+    - name: Create empty file
+      ansible.builtin.file:
+        path: /tmp/file.txt
+        state: touch
+        mode: '0644'
+EOF
+
+Finally:
+
+ansible-playbook -i inventory playbook.yml
+
+One important point: if $pwd is literally in the inventory, Ansible will use the literal string $pwd as the password. If pwd is a shell variable containing the actual password, it was not expanded when you wrote the inventory. In that case, tell me what ansible -i inventory stapp01 -m ping returns, and we can fix the authentication.
