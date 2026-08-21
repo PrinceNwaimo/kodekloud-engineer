@@ -1,0 +1,73 @@
+The Nautilus DevOps team wants to install and set up a simple httpd web server on all app servers in Stratos DC. Additionally, they want to deploy a sample web page for now using Ansible only. Therefore, write the required playbook to complete this task. Find more details about the task below.
+We already have an inventory file under /home/thor/ansible directory on jump host. Create a playbook.yml under /home/thor/ansible directory on jump host itself.
+Using the playbook, install httpd web server on all app servers. Additionally, make sure its service should up and running.
+Using blockinfile Ansible module add some content in /var/www/html/index.html file. Below is the content:
+Welcome to XfusionCorp!
+This is  Nautilus sample file, created using Ansible!
+Please do not modify this file manually!
+The /var/www/html/index.html file's user and group owner should be apache on all app servers.
+The /var/www/html/index.html file's permissions should be 0744 on all app servers.
+
+
+Note:
+i. Validation will try to run the playbook using command ansible-playbook -i inventory playbook.yml so please make sure the playbook works this way without passing any extra arguments.
+ii. Do not use any custom or empty marker for blockinfile module.
+
+SOLUTION
+Create /home/thor/ansible/playbook.yml with this:
+
+---
+- name: Install and configure httpd on all app servers
+  hosts: all
+  become: true
+
+
+  tasks:
+    - name: Install httpd
+      ansible.builtin.yum:
+        name: httpd
+        state: present
+
+
+    - name: Ensure httpd is running and enabled
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+
+    - name: Add sample content to index.html
+      ansible.builtin.blockinfile:
+        path: /var/www/html/index.html
+        create: true
+        block: |
+          Welcome to XfusionCorp!
+
+
+          This is  Nautilus sample file, created using Ansible!
+
+
+          Please do not modify this file manually!
+
+
+    - name: Set ownership and permissions on index.html
+      ansible.builtin.file:
+        path: /var/www/html/index.html
+        owner: apache
+        group: apache
+        mode: '0744'
+
+Then run exactly as the validator will:
+
+cd /home/thor/ansible
+ansible-playbook -i inventory playbook.yml
+Verify
+ansible -i inventory all -m shell -a "systemctl is-active httpd && ls -l /var/www/html/index.html && cat /var/www/html/index.html"
+
+The important details are:
+
+hosts: all — works with the existing inventory.
+become: true — required for package/service/web-root changes.
+blockinfile uses its default markers; no custom or empty marker is specified.
+Owner/group are both apache.
+Permissions are exactly 0744.
