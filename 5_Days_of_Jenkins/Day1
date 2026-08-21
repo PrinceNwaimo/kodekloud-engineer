@@ -1,0 +1,294 @@
+The DevOps team at xFusionCorp Industries is initiating the setup of CI/CD pipelines and has decided to utilize Jenkins as their server. Execute the task according to the provided requirements:
+1. Install Jenkins on the jenkins server using the apt utility only, and start it using the service command.
+If you face a timeout issue while starting the Jenkins service, first check the service status with service jenkins status
+Then review the logs in /var/log/jenkins/jenkins.log to identify the cause.
+2. Jenkin's admin user name should be theadmin, password should be Adm!n321, full name should be Siva and email should be siva@jenkins.stratos.xfusioncorp.com.
+
+Note:
+1. To access the jenkins server, connect from the jump host using the root user with the password S3curePass.
+2. After Jenkins server installation, click the Jenkins button on the top bar to access the Jenkins UI and follow on-screen instructions to create an admin user.
+
+SOLUTION
+
+Yes. This is a straightforward Jenkins installation task. Since the requirement specifically says to connect from the jump host as root, do it in this order.
+
+1. From the jump host, connect to the Jenkins server
+
+First identify the Jenkins server hostname/IP if it is already listed in your environment:
+
+ssh root@jenkins
+
+If jenkins does not resolve, check the lab's /etc/hosts:
+
+cat /etc/hosts
+
+Then connect using the Jenkins server IP:
+
+ssh root@<JENKINS_SERVER_IP>
+
+Password:
+
+S3curePass
+2. Update the apt package information
+
+On the Jenkins server:
+
+apt update
+
+Then check whether Jenkins is available:
+
+apt-cache policy jenkins
+
+If a Jenkins candidate is shown, install it with apt:
+
+apt install -y jenkins
+3. Start Jenkins using service
+
+The task specifically requires service, so use:
+
+service jenkins start
+
+Check it:
+
+service jenkins status
+
+You want to see something similar to:
+
+Active: active (running)
+
+You can also verify that Jenkins is listening:
+
+ss -lntp | grep 8080
+4. If service jenkins start times out
+
+Follow the task's instruction exactly:
+
+service jenkins status
+
+Then:
+
+cat /var/log/jenkins/jenkins.log
+
+For a more useful view of the latest entries:
+
+tail -50 /var/log/jenkins/jenkins.log
+
+Commonly, Jenkins may simply need more time to initialise. Don't repeatedly restart it immediately; inspect the log first.
+
+5. Get the Jenkins initial setup password
+
+If Jenkins presents the initial unlock screen, retrieve the password with:
+
+cat /var/lib/jenkins/secrets/initialAdminPassword
+
+Copy that value.
+
+6. Open the Jenkins UI
+
+In the lab UI, click the Jenkins button on the top bar as instructed.
+
+On the Unlock Jenkins screen, enter:
+
+<value from /var/lib/jenkins/secrets/initialAdminPassword>
+
+Continue.
+
+If asked which plugins to install, Install suggested plugins is normally sufficient for this lab.
+
+7. Create the required admin user
+
+Use exactly these values:
+
+Field	Value
+Username	theadmin
+Password	Adm!n321
+Confirm password	Adm!n321
+Full name	Siva
+Email	siva@jenkins.stratos.xfusioncorp.com
+
+Click Save and Continue.
+
+If Jenkins asks for the Jenkins URL, leave the automatically detected/default URL unless the lab specifies otherwise.
+
+8. Verify Jenkins
+
+Back on the Jenkins server:
+
+service jenkins status
+
+Then verify the process:
+
+ps -ef | grep '[j]enkins'
+
+And verify port 8080:
+
+ss -lntp | grep 8080
+
+You should have Jenkins running and the theadmin account created.
+
+Important: Do not manually create the admin user from the Linux shell. The task explicitly wants you to create it through the Jenkins UI.
+The hostname/IP is correct: jenkins resolves to 10.244.81.57. The problem is authentication, not DNS or connectivity.
+
+You entered the password from the task, but root is rejecting it. Also, trying jenkins@jenkins isn't useful yet because the jenkins Linux account normally isn't intended for SSH login.
+
+Try the required root password again
+
+From the jump host:
+
+ssh root@jenkins
+
+When prompted, enter exactly:
+
+S3curePass
+
+Make sure you're not accidentally copying a trailing space.
+
+If it still gives:
+
+Permission denied (publickey,password)
+
+then don't keep guessing passwords.
+
+Check whether the lab provides the credentials another way
+
+The task explicitly says:
+
+connect from the jump host using the root user with the password S3curePass
+
+So if S3curePass is being rejected, the most likely issue is that the Jenkins VM isn't currently accepting root password authentication or the lab environment has not applied the expected credentials.
+
+Run this from the jump host:
+
+ssh -vvv root@jenkins
+
+Enter S3curePass when prompted. Look near the end for lines such as:
+
+Authentications that can continue: publickey,password
+
+and:
+
+Permission denied
+
+You can also test whether the server is reachable independently of authentication:
+
+nc -zv jenkins 22
+
+You should get something like:
+
+Connection to jenkins 22 port [tcp/ssh] succeeded
+Don't use sudo on the jump host to fix this
+
+You are currently:
+
+thor@jumphost
+
+and the target is:
+
+jenkins -> 10.244.81.57
+
+The /etc/hosts entry is correct, so there's nothing to change in /etc/hosts.
+
+If S3curePass continues to fail, send me the output of:
+
+ssh -vvv root@jenkins
+
+especially the last ~20 lines after the password attempt. That will tell us whether this is a password issue, root-login restriction, or SSH configuration issue.
+Good — Jenkins itself installed successfully. The failure is simply because Java is not installed.
+
+Jenkins 2.568.2 requires Java. Since the task says to use apt for Jenkins installation, installing the Java dependency with apt is appropriate.
+
+1. Install Java
+
+On root@jenkins run:
+
+apt update
+apt install -y fontconfig openjdk-21-jre
+
+Then verify:
+
+java -version
+
+You should see Java 21.
+
+Also verify the executable is in PATH:
+
+command -v java
+
+Expected:
+
+/usr/bin/java
+2. Start Jenkins again
+
+Use the required service command:
+
+service jenkins start
+
+Then:
+
+service jenkins status
+
+If it starts successfully, you should see Jenkins running.
+
+3. If it still fails or times out
+
+Run:
+
+service jenkins status
+
+Then:
+
+tail -100 /var/log/jenkins/jenkins.log
+
+Also check Java:
+
+java -version
+command -v java
+4. Once Jenkins is running
+
+Get the initial Jenkins password:
+
+cat /var/lib/jenkins/secrets/initialAdminPassword
+
+Then click the Jenkins button in the top bar and use that password to unlock Jenkins.
+
+Create the required user:
+
+Username:     theadmin
+Password:     Adm!n321
+Full name:    Siva
+Email:        siva@jenkins.stratos.xfusioncorp.com
+
+Run these three commands now:
+
+apt install -y fontconfig openjdk-21-jre
+java -version
+service jenkins start
+
+Then paste the output of service jenkins start if it doesn't start.
+Perfect. Jenkins is now installed and running successfully. ✅
+
+Next: Create the Jenkins admin user
+Click the Jenkins button on the top bar of the lab interface.
+You should see Unlock Jenkins.
+Enter this initial password:
+733b97acaf6e46da9c6129efdfbf0ae3
+Click Continue.
+Choose Install suggested plugins if prompted.
+When asked to create the first admin user, enter:
+Username:     theadmin
+Password:     Adm!n321
+Confirm:      Adm!n321
+Full name:    Siva
+Email:        siva@jenkins.stratos.xfusioncorp.com
+Continue through the setup.
+Final server-side verification
+
+After completing the UI setup, you can verify Jenkins is still running:
+
+service jenkins status
+
+You should have:
+
+* jenkins is running
+
+At that point, don't change anything else unless the lab validator reports an issue.
