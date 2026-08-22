@@ -1,0 +1,69 @@
+Developers are looking for dependencies to be installed and run on Nautilus app servers in Stratos DC. They have shared some requirements with the DevOps team. Because we are now managing packages installation and services management using Ansible, some playbooks need to be created and tested. As per details mentioned below please complete the task:
+a. On jump host create an Ansible playbook /home/thor/ansible/playbook.yml and configure it to install vsftpd on all app servers.
+b. After installation make sure to start and enable vsftpd service on all app servers.
+c. The inventory /home/thor/ansible/inventory is already there on jump host.
+d. Make sure user thor should be able to run the playbook on jump host.
+
+Note: Validation will try to run playbook using command ansible-playbook -i inventory playbook.yml so please make sure playbook works this way, without passing any extra arguments.
+
+SOLUTION
+On the jump host, create /home/thor/ansible/playbook.yml with this playbook:
+
+---
+- name: Install and configure vsftpd
+  hosts: all
+  become: true
+
+
+  tasks:
+    - name: Install vsftpd
+      package:
+        name: vsftpd
+        state: present
+
+
+    - name: Start and enable vsftpd
+      service:
+        name: vsftpd
+        state: started
+        enabled: true
+
+Then run these commands as thor:
+
+cd /home/thor/ansible
+
+
+cat > playbook.yml <<'EOF'
+---
+- name: Install and configure vsftpd
+  hosts: all
+  become: true
+
+
+  tasks:
+    - name: Install vsftpd
+      package:
+        name: vsftpd
+        state: present
+
+
+    - name: Start and enable vsftpd
+      service:
+        name: vsftpd
+        state: started
+        enabled: true
+EOF
+
+
+ansible-playbook -i inventory playbook.yml
+Verify
+ansible-playbook -i inventory playbook.yml
+
+You should see all app servers complete successfully with something similar to:
+
+PLAY RECAP
+stapp01    ok=3  changed=2  unreachable=0  failed=0
+stapp02    ok=3  changed=2  unreachable=0  failed=0
+stapp03    ok=3  changed=2  unreachable=0  failed=0
+
+The important details are hosts: all, become: true, and using the generic package/service modules, so the validator's exact command works without extra arguments.
