@@ -1,0 +1,35 @@
+The Nautilus DevOps team aims to manage all servers within the stack using Ansible, utilizing a common sudo user across all servers.
+They plan to use this user for various tasks on each server. While this isn't finalized, they're starting with testing.
+Ansible is already installed on the jump host via yum. Here's the requirement:
+
+On the jump host, modify the default configuration of Ansible to enable the use of jim as the default SSH user for all hosts. 
+Ensure to make changes within Ansible's default configuration without creating a new one.
+
+SOLUTION
+You need to modify Ansible’s default configuration file, not create a new ansible.cfg.
+
+On the jump host, do this:
+
+Find the default configuration file:
+rpm -ql ansible | grep ansible.cfg
+
+It should show something like:
+
+/etc/ansible/ansible.cfg
+Edit the default configuration:
+sudo vi /etc/ansible/ansible.cfg
+Find the [defaults] section and set:
+[defaults]
+remote_user = jim
+
+If remote_user already exists, just change its value to jim.
+
+Verify the setting:
+ansible-config dump | grep -i remote_user
+
+You should see:
+
+DEFAULT_REMOTE_USER(/etc/ansible/ansible.cfg) = jim
+Important
+
+Do not create /home/thor/ansible/ansible.cfg or another local configuration file. The requirement specifically says to modify Ansible's default configuration.
