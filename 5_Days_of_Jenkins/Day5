@@ -1,0 +1,114 @@
+Some new requirements have come up to install and configure some packages on the Nautilus infrastructure under Stratos Datacenter. The Nautilus DevOps team installed and configured a new Jenkins server so they wanted to create a Jenkins job to automate this task. Find below more details and complete the task accordingly:
+1. Access the Jenkins UI by clicking on the Jenkins button in the top bar. Log in using the credentials: username admin and password Adm!n321.
+2. Create a new Jenkins job named install-packages and configure it with the following specifications:
+Add a string parameter named PACKAGE.
+Configure the job to install a package specified in the $PACKAGE parameter on the storage server (Stratos Datacenter).
+Build the job at least once (e.g. with parameter PACKAGE=vim-enhanced) so the package is installed on the Storage server and can be verified.
+
+Note:
+
+1. Ensure to install any required plugins and restart the Jenkins service if necessary. Opt for Restart Jenkins when installation is complete and no jobs are running on the plugin installation/update page. Refresh the UI page if needed after restarting the service.
+2. Verify that the Jenkins job runs successfully on repeated executions to ensure reliability.
+3. Capture screenshots of your configuration for documentation and review purposes. Alternatively, use screen recording software like loom.com for comprehensive documentation and sharing.
+
+SOLUTION
+This task can be completed entirely from the Jenkins UI. Follow these steps:
+
+1. Open Jenkins
+Click Jenkins in the top bar.
+Log in:
+Username: admin
+Password: Adm!n321
+2. Create the install-packages job
+From the Jenkins dashboard, click New Item.
+Enter:
+install-packages
+Select Freestyle project.
+Click OK.
+3. Add the PACKAGE parameter
+
+In the job configuration:
+
+Under General, tick This project is parameterized.
+Click Add Parameter → String Parameter.
+Set:
+Name: PACKAGE
+Description: Package to install on the storage server
+Default value can be left blank.
+Save the parameter configuration.
+4. Configure the build command
+
+Scroll to Build Steps → Add build step → Execute shell.
+
+Use SSH to connect to the storage server and install the requested package:
+
+sshpass -p '<storage-password>' ssh -o StrictHostKeyChecking=no <storage-user>@ststor01 "sudo yum install -y $PACKAGE"
+
+However, don't guess the storage-server username/password. In these Nautilus labs, the credentials can vary.
+
+If Jenkins already has an SSH key configured for the storage server, use:
+
+ssh -o StrictHostKeyChecking=no <storage-user>@ststor01 "sudo yum install -y $PACKAGE"
+
+The important part is that $PACKAGE comes from the Jenkins string parameter.
+
+5. If SSH/credentials are not available
+
+If the build fails with something such as:
+
+Permission denied
+
+or
+
+ssh: command not found
+
+check the Jenkins server first:
+
+which ssh
+which sshpass
+
+If sshpass is required and permitted:
+
+sudo apt-get update
+sudo apt-get install -y sshpass
+
+Then use the appropriate storage-server credentials supplied by the lab.
+
+6. Build the job
+
+Go back to the install-packages job:
+
+Click Build with Parameters.
+Enter:
+PACKAGE=vim-enhanced
+Click Build.
+Open the build number → Console Output.
+Confirm that the installation completes successfully.
+
+You should see something along the lines of:
+
+Complete!
+Finished: SUCCESS
+7. Verify on the storage server
+
+SSH to the storage server and run:
+
+rpm -q vim-enhanced
+
+or:
+
+yum list installed vim-enhanced
+
+It should show the installed package.
+
+8. Test repeated executions
+
+Run Build with Parameters again with:
+
+PACKAGE=vim-enhanced
+
+The second execution should also finish successfully. yum install -y should recognise that the package is already installed rather than failing.
+
+Important: Don't hard-code vim-enhanced in the build command. The command must use $PACKAGE, because the lab is specifically testing the Jenkins parameterisation.
+
+If you show me the storage-server credentials / existing Jenkins configuration or the Console Output from a failed build, I can give you the exact command to put in the Execute Shell box.
