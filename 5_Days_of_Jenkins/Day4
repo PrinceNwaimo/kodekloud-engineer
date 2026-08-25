@@ -1,0 +1,68 @@
+xFusionCorp Industries' DevOps team aims to streamline the management of Jenkins jobs by organizing them into distinct folders based on their purpose. Complete the task following the provided requirements:
+1.Access the Jenkins UI by clicking on the `Jenkins` button in the top bar. Log in using the credentials: username `admin` and password `Adm!n321`.
+2\. Create a new folder named `Apache` within the Jenkins UI.
+3\. Move the existing jobs `httpd-php` and `services` under the newly created `Apache` folder.
+
+`Note:`
+
+1\. Ensure to install any required plugins and restart the Jenkins service if necessary. Opt for `Restart Jenkins when installation is complete and no jobs are running` on the plugin installation/update page.
+2\. Be aware that Jenkins UI may experience temporary unresponsiveness during the service restart. Refresh the UI page if needed.
+3\. Capture screenshots of your work for documentation and review purposes. Alternatively, utilize screen recording software like loom.com for detailed documentation and sharing.
+
+SOLUTION
+Here’s the quickest way to complete it in Jenkins:
+
+Open Jenkins
+Click Jenkins in the top bar.
+Log in:
+Username: admin
+Password: Adm!n321
+Create the Apache folder
+From the Jenkins dashboard, click New Item.
+Enter:
+Apache
+Select Folder.
+Click OK.
+Click Save if prompted.
+Move httpd-php into Apache
+Open the existing httpd-php job.
+Click Move in the left-side menu.
+Select the destination folder:
+Apache
+Confirm the move.
+Move services into Apache
+Return to the Jenkins dashboard.
+Open services.
+Click Move.
+Select:
+Apache
+Confirm.
+
+Verify
+
+Go back to the Jenkins dashboard.
+Open Apache.
+You should see:
+httpd-php
+services
+
+The final structure should be:
+
+Jenkins
+└── Apache
+    ├── httpd-php
+    └── services
+If “Move” is not available
+
+You may need the Folders plugin. Go to:
+
+Manage Jenkins → Plugins → Available plugins
+
+Search for Folders, install it, and select Restart Jenkins when installation is complete and no jobs are running if Jenkins requests a restart.
+
+After Jenkins comes back, refresh the browser and repeat the steps above.
+
+For the documentation requirement, take screenshots of:
+
+The Jenkins dashboard showing the Apache folder.
+The Apache folder opened with both httpd-php and services inside.
