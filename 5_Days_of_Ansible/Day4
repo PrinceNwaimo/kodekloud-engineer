@@ -1,0 +1,62 @@
+The Nautilus DevOps team needs to copy data from the jump host to all application servers in Stratos DC using Ansible. Execute the task with the following details:
+a. Create an inventory file /home/thor/ansible/inventory on jump_host and add all application servers as managed nodes.
+b. Create a playbook /home/thor/ansible/playbook.yml on the jump host to copy the /usr/src/dba/index.html file to all application servers, placing it at /opt/dba.
+
+Note: Validation will run the playbook using the command ansible-playbook -i inventory playbook.yml. Ensure the playbook functions properly without any extra arguments.
+
+SOLUTION
+Yes. Since validation runs from /home/thor/ansible with no extra variables, make the inventory self-contained with the SSH credentials already used for these Nautilus servers.
+
+1. Create the inventory
+
+On the jump host:
+
+mkdir -p /home/thor/ansible
+cd /home/thor/ansible
+nano inventory
+
+Add:
+
+[app]
+stapp01 ansible_host=stapp01 ansible_user=tony ansible_ssh_pass=Ir0nM@n
+stapp02 ansible_host=stapp02 ansible_user=tony ansible_ssh_pass=Ir0nM@n
+stapp03 ansible_host=stapp03 ansible_user=tony ansible_ssh_pass=Ir0nM@n
+
+If your lab's actual SSH password/user differs, use the credentials that successfully worked for your servers.
+
+2. Create the playbook
+nano /home/thor/ansible/playbook.yml
+
+Use:
+
+---
+- name: Copy DBA index file to all application servers
+  hosts: app
+  become: true
+
+  tasks:
+    - name: Ensure /opt/dba directory exists
+      ansible.builtin.file:
+        path: /opt/dba
+        state: directory
+        mode: '0755'
+
+    - name: Copy index.html to application servers
+      ansible.builtin.copy:
+        src: /usr/src/dba/index.html
+        dest: /opt/dba/index.html
+        mode: '0644'
+
+Important: src is on the jump host, because copy transfers the file from the Ansible controller to the managed nodes.
+
+3. Test exactly as the validator will
+cd /home/thor/ansible
+ansible-playbook -i inventory playbook.yml
+
+Then verify:
+
+ansible -i inventory app -m shell -a 'ls -l /opt/dba/index.html'
+
+You should see /opt/dba/index.html on stapp01, stapp02, and stapp03.
+
+If the password you previously used is still the one for tony, the above should run without requiring any extra arguments.
