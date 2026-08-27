@@ -1,0 +1,29 @@
+There is a Git server utilized by the Nautilus project teams. Recently, a new developer named Jon joined the team and needs to begin working on a project. 
+To begin, he must fork an existing Git repository. Follow the steps below:
+Click on the Gitea UI button located on the top bar to access the Gitea page.
+Login to Gitea server using username jon and password Jon_pass123.
+Once logged in, locate the Git repository named sarah/story-blog and fork it under the jon user.
+
+Note: For tasks requiring web UI changes, screenshots are necessary for review purposes. 
+Additionally, consider utilizing screen recording software such as loom.com to record and share your task completion process.
+
+SOLUTION
+Sure. Follow these steps in the KodeKloud lab:
+
+Click Gitea UI on the top bar.
+Log in:
+Username: jon
+Password: Jon_pass123
+After logging in, find the repository sarah/story-blog.
+You can use the repository/search field if needed.
+Open sarah/story-blog.
+Click the Fork button, usually near the upper-right of the repository page.
+On the fork screen, make sure the Owner is set to jon.
+Click Fork Repository / Fork.
+Confirm that the resulting repository is:
+jon/story-blog
+Validation
+
+Open the newly forked repository and verify the owner shown is jon and the repository name is story-blog.
+
+For the screenshot requirement, take a screenshot showing the jon/story-blog repository page after the fork is complete.
