@@ -1,0 +1,66 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. 
+To achieve this, they have segmented large tasks into smaller, more manageable units. 
+This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. 
+By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. 
+Create a VPC named nautilus-vpc in region us-east-1 with any IPv4 CIDR block through terraform. 
+The Terraform working directory is /home/bob/terraform. 
+Create the main.tf file (do not create a different .tf file) to accomplish this task. 
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+You only need a single main.tf in /home/bob/terraform.
+
+1. Open the terminal in VS Code
+cd /home/bob/terraform
+2. Create main.tf
+
+Use this configuration:
+resource "aws_vpc" "nautilus_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "nautilus-vpc"
+  }
+}
+2. Check the existing provider
+
+You can confirm provider.tf already has the AWS provider:
+
+cat /home/bob/terraform/provider.tf
+
+It should have something similar to:
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+Don't create another provider block in main.tf.
+3. Initialize Terraform
+terraform init
+4. Check the configuration
+terraform validate
+
+You should get:
+
+Success! The configuration is valid.
+5. Create the VPC
+terraform apply
+
+When prompted:
+
+Do you want to perform these actions?
+
+enter:
+
+yes
+6. Verify
+terraform show
+
+You should see an aws_vpc.nautilus_vpc resource with:
+
+Region: us-east-1
+CIDR: 10.0.0.0/16
+Name tag: nautilus-vpc
+
+That completes the task.
