@@ -1,0 +1,132 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition.
+To achieve this, they have segmented large tasks into smaller, more manageable units. 
+This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. 
+By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+
+Use Terraform to create a security group under the default VPC with the following requirements:
+
+1) The name of the security group must be nautilus-sg.
+
+2) The description must be Security group for Nautilus App Servers.
+
+3) Add an inbound rule of type HTTP, with a port range of 80, and source CIDR range 0.0.0.0/0.
+
+4) Add another inbound rule of type SSH, with a port range of 22, and source CIDR range 0.0.0.0/0.
+
+Ensure that the security group is created in the us-east-1 region using Terraform. 
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+Since the task explicitly requires only /home/bob/terraform/main.tf, use this configuration.
+
+1. Go to the Terraform directory
+cd /home/bob/terraform
+2. Create main.tf
+nano main.tf
+data "aws_vpc" "default" {
+  default = true
+}
+
+resource "aws_security_group" "nautilus_sg" {
+  name        = "nautilus-sg"
+  description = "Security group for Nautilus App Servers"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+Since it has a provider.tf:
+terraform { 
+  required_providers { 
+    aws = { 
+      source = "hashicorp/aws" 
+      version = "5.91.0" 
+    } 
+  } 
+} 
+ 
+provider "aws" { 
+  region                      = "us-east-1" 
+  skip_credentials_validation = true 
+  skip_requesting_account_id  = true 
+  s3_use_path_style = true 
+ 
+endpoints { 
+    ec2            = "http://aws:4566" 
+    apigateway     = "http://aws:4566" 
+    cloudformation = "http://aws:4566" 
+    cloudwatch     = "http://aws:4566" 
+    dynamodb       = "http://aws:4566" 
+    es             = "http://aws:4566" 
+    firehose       = "http://aws:4566" 
+    iam            = "http://aws:4566" 
+    kinesis        = "http://aws:4566" 
+    lambda         = "http://aws:4566" 
+    route53        = "http://aws:4566" 
+    redshift       = "http://aws:4566" 
+    s3             = "http://aws:4566" 
+    secretsmanager = "http://aws:4566" 
+    ses            = "http://aws:4566" 
+    sns            = "http://aws:4566" 
+    sqs            = "http://aws:4566" 
+    ssm            = "http://aws:4566" 
+    stepfunctions  = "http://aws:4566" 
+    sts            = "http://aws:4566" 
+    rds            = "http://aws:4566" 
+  } 
+} 
+ provider.tf
+3. Initialise Terraform
+terraform init
+4. Validate
+terraform validate
+
+You should see:
+
+Success! The configuration is valid.
+5. Apply
+terraform apply
+
+When prompted:
+
+Do you want to perform these actions?
+
+enter:
+
+yes
+6. Verify
+terraform show
+
+You should see the security group with:
+
+Name: nautilus-sg
+Description: Security group for Nautilus App Servers
+VPC: default VPC
+HTTP: TCP 80 from 0.0.0.0/0
+SSH: TCP 22 from 0.0.0.0/0
+Region: us-east-1
+
+Only main.tf is needed.
