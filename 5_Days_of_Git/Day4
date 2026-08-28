@@ -1,0 +1,135 @@
+The Nautilus development team has initiated a new project development, establishing various Git repositories to manage each project's source code. 
+Recently, a repository named /opt/official.git was created. The team has provided a sample index.html file located on the jump host under the /tmp directory. 
+This repository has been cloned to /usr/src/kodekloudrepos on the storage server in the Stratos DC.
+
+Copy the sample index.html file from the jump host to the storage server placing it within the cloned repository at /usr/src/kodekloudrepos/official.
+
+Add and commit the file to the repository.
+
+Push the changes to the master branch.
+
+SOLUTION
+Good. Stop here and don't run git config or chown yet.
+
+We now know the cloned working repository is:
+
+root root /usr/src/kodekloudrepos/beta
+
+The safest approach is to perform the Git operations as the repository owner (root) rather than modifying ownership or Git safety configuration.
+
+Since you're logged in as natasha, let's first check whether natasha has sudo access:
+
+sudo -l
+
+If sudo is available, we can use sudo for the Git operations without changing the repository's ownership/configuration.
+
+Also check that the sample file is present:
+
+ls -l /tmp/index.html
+
+Send me the output of:
+
+sudo -l
+ls -l /tmp/index.html
+
+Then I'll give you the exact commands for the rest of the task.
+
+[natasha@ststor01 beta]$ sudo -l
+Matching Defaults entries for natasha on ststor01:
+    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin, env_reset, env_keep="COLORS DISPLAY
+    HOSTNAME HISTSIZE KDEDIR LS_COLORS", env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE",
+    env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES", env_keep+="LC_MONETARY LC_NAME LC_NUMERIC
+    LC_PAPER LC_TELEPHONE", env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY",
+    secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin
+
+User natasha may run the following commands on ststor01:
+    (ALL) ALL
+    (ALL) NOPASSWD: ALL
+[natasha@ststor01 beta]$ ls -l /tmp/index.html
+-rw-r--r-- 1 natasha natasha 27 Aug 28 15:41 /tmp/index.html
+[natasha@ststor01 beta]$ 
+
+Perfect. Now we know the clean solution.
+
+The repository is owned by root, so don't change ownership and don't add safe.directory. Since natasha has passwordless sudo, perform the Git operations as root.
+
+1. Copy the file into the repository
+
+You're already on ststor01:
+
+sudo cp /tmp/index.html /usr/src/kodekloudrepos/beta/
+2. Run Git as root
+cd /usr/src/kodekloudrepos/beta
+sudo git status
+
+You should see index.html as untracked.
+
+Then:
+
+sudo git add index.html
+3. Commit
+sudo git commit -m "Add index.html"
+
+Because you're running Git as root, check whether the repository already has a configured Git identity. Do not configure one yet unless this command specifically complains about author identity.
+
+4. Push
+
+If the commit succeeds:
+
+sudo git push origin master
+5. Verify
+sudo git status
+sudo git log -1 --oneline
+
+You want to see the new commit and a clean working tree.
+
+Full sequence
+sudo cp /tmp/index.html /usr/src/kodekloudrepos/beta/
+
+cd /usr/src/kodekloudrepos/beta
+
+sudo git status
+sudo git add index.html
+sudo git commit -m "Add index.html"
+sudo git push origin master
+sudo git status
+
+Important: Don't use git config --global, safe.directory, or chown this time. We're leaving the lab's existing repository ownership and configuration untouched.
+
+[natasha@ststor01 beta]$ sudo git add index.html
+[natasha@ststor01 beta]$ sudo git commit -m "Add index.html"
+[master de59a0e] Add index.html
+ 1 file changed, 1 insertion(+)
+ create mode 100644 index.html
+[natasha@ststor01 beta]$ sudo git push origin master
+Enumerating objects: 4, done.
+Counting objects: 100% (4/4), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (3/3), 332 bytes | 332.00 KiB/s, done.
+Total 3 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To /opt/beta.git
+   0a7b00c..de59a0e  master -> master
+[natasha@ststor01 beta]$ sudo git status
+sudo git log -1 --oneline
+On branch master
+Your branch is up to date with 'origin/master'.
+
+nothing to commit, working tree clean
+de59a0e (HEAD -> master, origin/master) Add index.html
+[natasha@ststor01 beta]$ 
+
+✅ Success! The beta repository task is completed correctly.
+
+You have:
+
+Copied index.html into /usr/src/kodekloudrepos/beta
+Added it with Git
+Committed it as de59a0e
+Pushed it successfully to the master branch
+Confirmed the working tree is clean
+Confirmed origin/master is at the same commit
+
+The key was using sudo git because the cloned repository and bare remote are owned by root, without modifying Git configuration or repository ownership.
+
+This task is complete.
