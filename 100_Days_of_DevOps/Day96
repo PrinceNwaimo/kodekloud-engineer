@@ -1,0 +1,129 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. 
+To achieve this, they have segmented large tasks into smaller, more manageable units.
+
+For this task, create an EC2 instance using Terraform with the following requirements:
+
+The EC2 instance must use the value xfusion-ec2 as its Name tag, which defines the instance name in AWS.
+
+Use the Amazon Linux ami-0c101f26f147fa7fd to launch this instance.
+
+The Instance type must be t2.micro.
+
+Create a new RSA key named xfusion-kp.
+
+Attach the default (available by default) security group.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to provision the instance.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+
+Since this is the same Terraform lab environment, use only /home/bob/terraform/main.tf.
+
+1. Go to the Terraform directory
+cd /home/bob/terraform
+
+1. Generate the RSA key
+
+From /home/bob/terraform:
+
+ssh-keygen -t rsa -b 2048 -f xfusion-kp -N ""
+
+This creates:
+
+xfusion-kp       # private key
+xfusion-kp.pub   # public key
+
+Check it:
+
+cat xfusion-kp.pub
+2. Create main.tf
+nano main.tf
+resource "aws_key_pair" "xfusion_kp" {
+  key_name   = "xfusion-kp"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCiIfjfA4542E6LfLudAhdDZuCnRSxBqZeEO9C4UiPRwWMI/ot49faV90WgayZtwy9V4YioAdl5IcjVxMYSznAF9zwaKc6ZwQ7/d9pOGe4ZSB1EEgRvdS3lmr9BdLS9km+IK31h260ULMR/OOJ+egzGz3J5D98gDGwF4J0RhLpWCwd3ybaJNj1wL/z4cQZuXwqC5u8qTi68dtEUdl5rqgBjhajKrz/1MQuODVFGzFQBfVzbag8Mci2b9DxjO1XUdD4ZV+Qa4kd62szEtWn8h3UoTICKBfAmpojy4ibr5KszBwaesQNHovoSa+A0poWDZMdSTomdPN8asrvbcp+/CGOp bob@iac-server"
+}
+
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_security_group" "default" {
+  vpc_id = data.aws_vpc.default.id
+
+  filter {
+    name   = "group-name"
+    values = ["default"]
+  }
+}
+
+resource "aws_instance" "xfusion_ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  key_name      = aws_key_pair.xfusion_kp.key_name
+
+  vpc_security_group_ids = [
+    data.aws_security_group.default.id
+  ]
+
+  tags = {
+    Name = "xfusion-ec2"
+  }
+}
+This is the provider.tf terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+provider.tf
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style = true
+
+endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+3. Run
+cd /home/bob/terraform
+terraform init
+terraform validate
+terraform plan
+terraform apply
+
+When asked to confirm:
+
+yes
+Your files should now be
+/home/bob/terraform/
+├── provider.tf
+└── main.tf
+
+This keeps your existing provider.tf intact while satisfying the instruction that the EC2 resources must be provisioned from main.tf.
