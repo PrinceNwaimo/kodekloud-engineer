@@ -1,0 +1,44 @@
+The Nautilus developers are engaged in active development on one of the project repositories located at /usr/src/kodekloudrepos/demo. 
+During testing, several test branches were created, and now they require cleanup. Here are the requirements provided to the DevOps team:
+On the Storage server in Stratos DC, delete a branch named xfusioncorp_demo from the /usr/src/kodekloudrepos/demo Git repository.
+
+SOLUTION
+cd /usr/src/kodekloudrepos/demo
+sudo git branch
+Exactly — the issue now is that xfusioncorp_demo is the currently checked-out branch in that worktree. Git will not delete the branch you're currently on.
+
+Switch to master first:
+
+sudo git checkout master
+
+Then delete the branch:
+
+sudo git branch -D xfusioncorp_demo
+
+Finally verify:
+
+sudo git branch
+
+You should see:
+
+* master
+
+and xfusioncorp_demo should be gone.
+
+Why this happened
+
+You currently have:
+
+  master
+* xfusioncorp_demo
+
+The * means you are currently on xfusioncorp_demo. Git requires you to switch to another branch before deleting it.
+
+So the exact sequence is:
+
+cd /usr/src/kodekloudrepos/demo
+sudo git checkout master
+sudo git branch -D xfusioncorp_demo
+sudo git branch
+
+No global safe.directory configuration is needed.
