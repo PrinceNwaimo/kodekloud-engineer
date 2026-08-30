@@ -1,0 +1,131 @@
+When establishing infrastructure on the AWS cloud, Identity and Access Management (IAM) is among the first and most critical services to configure. 
+
+IAM facilitates the creation and management of user accounts, groups, roles, policies, and other access controls. 
+
+The Nautilus DevOps team is currently in the process of configuring these resources and has outlined the following requirements.
+
+Create an IAM policy named iampolicy_mark in us-east-1 region using Terraform. 
+
+It must allow read-only access to the EC2 console, i.e., this policy must allow users to view all instances, AMIs, and snapshots in the Amazon EC2 console.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+
+This is the provider.tf:terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style = true
+
+endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+
+Since provider.tf already exists, you should not repeat the terraform block or provider "aws" block in main.tf.
+
+Your existing provider.tf already has:
+
+AWS provider version 5.91.0
+Region us-east-1
+IAM endpoint http://aws:4566
+The other LocalStack endpoints
+
+So main.tf only needs the IAM policy resource.
+
+/home/bob/terraform/main.tf
+
+Create/edit it:
+
+cd /home/bob/terraform
+vi main.tf
+
+Put only this inside:
+
+resource "aws_iam_policy" "iampolicy_mark" {
+  name        = "iampolicy_mark"
+  description = "Read-only access to EC2 console"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeImages",
+          "ec2:DescribeSnapshots"
+        ]
+
+        Resource = "*"
+      }
+    ]
+  })
+}
+Then run
+terraform fmt
+
+Then:
+
+terraform validate
+
+Then:
+
+terraform apply
+
+Type:
+
+yes
+Why we don't add the provider again
+
+Terraform automatically combines all .tf files in the same directory.
+
+So your directory effectively becomes:
+
+/home/bob/terraform/
+├── provider.tf    ← AWS provider configuration
+└── main.tf        ← IAM policy
+
+Terraform reads both files together.
+
+If you put another terraform {} or provider "aws" {} block in main.tf, you'd risk the duplicate provider configuration problem you encountered previously.
+
+Also, your existing provider.tf already contains:
+
+iam = "http://aws:4566"
+
+so the IAM policy will use the correct LocalStack endpoint.
