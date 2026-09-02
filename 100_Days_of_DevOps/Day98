@@ -1,0 +1,257 @@
+The Nautilus DevOps team is expanding their AWS infrastructure and requires the setup of a private Virtual Private Cloud (VPC) along with a subnet. 
+This VPC and subnet configuration will ensure that resources deployed within them remain isolated from external networks and can only communicate within the VPC. 
+Additionally, the team needs to provision an EC2 instance under the newly created private VPC. 
+This instance should be accessible only from within the VPC, allowing for secure communication and resource management within the AWS environment.
+
+Create a VPC named datacenter-priv-vpc with the CIDR block 10.0.0.0/16.
+
+Create a subnet named datacenter-priv-subnet inside the VPC with the CIDR block 10.0.1.0/24 and auto-assign IP option must not be enabled.
+
+Create an EC2 instance named datacenter-priv-ec2 inside the subnet and instance type must be t2.micro.
+
+Ensure the security group of the EC2 instance allows access only from within the VPC's CIDR block.
+
+Create the main.tf file (do not create a separate .tf file) to provision the VPC, subnet and EC2 instance.
+
+Use variables.tf file with the following variable names:
+
+KKE_VPC_CIDR for the VPC CIDR block.
+KKE_SUBNET_CIDR for the subnet CIDR block.
+Use the outputs.tf file with the following variable names:
+
+KKE_vpc_name for the name of the VPC.
+KKE_subnet_name for the name of the subnet.
+KKE_ec2_private for the name of the EC2 instance.
+
+Notes:
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+
+SOLUTION
+Absolutely. For this KodeKloud task, keep the configuration simple: all VPC, subnet, security group, and EC2 resources go into main.tf, with variables in variables.tf and outputs in outputs.tf.
+
+Since your Terraform environment has previously been using the AWS provider with LocalStack, keep your existing provider.tf and don't create another provider configuration.
+
+1. Go to the Terraform directory
+cd /home/bob/terraform
+
+Check what is already there:
+
+ls
+
+You should have something like:
+
+main.tf
+provider.tf
+variables.tf
+outputs.tf
+
+If main.tf, variables.tf, or outputs.tf don't exist, create them.
+
+2. Create variables.tf
+sudo vi variables.tf
+
+Put:
+
+variable "KKE_VPC_CIDR" {
+  type    = string
+  default = "10.0.0.0/16"
+}
+
+variable "KKE_SUBNET_CIDR" {
+  type    = string
+  default = "10.0.1.0/24"
+}
+Why?
+
+The task specifically requires these two variable names:
+
+KKE_VPC_CIDR → VPC CIDR
+KKE_SUBNET_CIDR → subnet CIDR
+3. Create main.tf
+sudo vi main.tf
+
+Use:
+
+resource "aws_vpc" "datacenter_priv_vpc" {
+  cidr_block = var.KKE_VPC_CIDR
+
+  tags = {
+    Name = "datacenter-priv-vpc"
+  }
+}
+
+resource "aws_subnet" "datacenter_priv_subnet" {
+  vpc_id                  = aws_vpc.datacenter_priv_vpc.id
+  cidr_block              = var.KKE_SUBNET_CIDR
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name = "datacenter-priv-subnet"
+  }
+}
+
+resource "aws_security_group" "datacenter_priv_sg" {
+  name        = "datacenter-priv-sg"
+  description = "Allow traffic only from within the VPC"
+  vpc_id      = aws_vpc.datacenter_priv_vpc.id
+
+  ingress {
+    description = "Allow traffic from VPC"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.KKE_VPC_CIDR]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "datacenter-priv-sg"
+  }
+}
+
+resource "aws_instance" "datacenter_priv_ec2" {
+  ami           = "ami-0c02fb55956c7d316"
+  instance_type = "t2.micro"
+  subnet_id     = aws_subnet.datacenter_priv_subnet.id
+
+  vpc_security_group_ids = [
+    aws_security_group.datacenter_priv_sg.id
+  ]
+
+  tags = {
+    Name = "datacenter-priv-ec2"
+  }
+}
+Important parts
+
+The subnet has:
+
+map_public_ip_on_launch = false
+
+This satisfies the requirement that auto-assignment of public IPs must not be enabled.
+
+The EC2 is placed directly into the new subnet:
+
+subnet_id = aws_subnet.datacenter_priv_subnet.id
+
+And the security group only permits inbound traffic from:
+
+cidr_blocks = [var.KKE_VPC_CIDR]
+
+Since KKE_VPC_CIDR is 10.0.0.0/16, the instance accepts inbound traffic only from 10.0.0.0/16.
+
+4. Create outputs.tf
+sudo vi outputs.tf
+
+Put:
+
+output "KKE_vpc_name" {
+  value = aws_vpc.datacenter_priv_vpc.tags["Name"]
+}
+
+output "KKE_subnet_name" {
+  value = aws_subnet.datacenter_priv_subnet.tags["Name"]
+}
+
+output "KKE_ec2_private" {
+  value = aws_instance.datacenter_priv_ec2.tags["Name"]
+}
+
+The required output variable names are therefore exactly:
+
+KKE_vpc_name
+KKE_subnet_name
+KKE_ec2_private
+5. Format the Terraform files
+
+Run:
+
+terraform fmt
+
+This doesn't create infrastructure. It simply formats your .tf files into Terraform's standard style.
+
+Then:
+
+terraform validate
+
+You want:
+
+Success! The configuration is valid.
+6. Initialize Terraform
+
+If this directory hasn't already been initialized:
+
+terraform init
+
+If it is already initialized, you can still run it safely.
+
+7. Run Terraform plan
+terraform plan
+
+The first time, you should see resources that Terraform intends to create.
+
+You should have 4 resources:
+
+aws_vpc
+aws_subnet
+aws_security_group
+aws_instance
+
+Then apply:
+
+terraform apply
+
+When asked:
+
+Do you want to perform these actions?
+
+enter:
+
+yes
+8. Verify the outputs
+
+Run:
+
+terraform output
+
+You should see values corresponding to:
+
+KKE_vpc_name      = "datacenter-priv-vpc"
+KKE_subnet_name   = "datacenter-priv-subnet"
+KKE_ec2_private   = "datacenter-priv-ec2"
+9. Most important: final terraform plan
+
+After terraform apply, run:
+
+terraform plan
+
+The final result should be:
+
+No changes. Your infrastructure matches the configuration.
+
+That is exactly what the task's validator is asking for.
+
+Final structure
+
+Your directory should essentially contain:
+
+/home/bob/terraform/
+├── main.tf
+├── variables.tf
+├── outputs.tf
+└── provider.tf
+
+Don't create separate files for the VPC, subnet, security group, or EC2. All four resources belong in main.tf as requested.
+
+One thing to watch: if your existing provider.tf uses a specific LocalStack-compatible AMI or your lab's environment expects a different AMI ID, use that AMI rather than changing the provider configuration.
