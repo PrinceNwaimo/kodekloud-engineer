@@ -1,0 +1,88 @@
+The Nautilus DevOps team aims to containerize various applications following a recent meeting with the application development team. 
+They intend to conduct testing with the following steps:
+
+Install docker-ce and docker compose packages on App Server 1.
+
+Initiate the docker service.
+
+SOLUTION
+ Prerequisites: Verify Your OS
+The installation method depends on your server's operating system. The search results include instructions for both RHEL/CentOS and Ubuntu/Debian.
+
+You can check your OS with:
+
+bash
+cat /etc/os-release
+🛠️ Installation Steps
+Option A: For RHEL / CentOS / Rocky / Alma Linux
+If your App Server 1 runs a Red Hat-based distribution, follow these steps:
+
+Install the repository management tool:
+
+bash
+sudo dnf -y install dnf-plugins-core
+Add the official Docker repository:
+
+bash
+sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+(Note: You can also use the CentOS repo URL, which often works for compatible distributions: https://download.docker.com/linux/centos/docker-ce.repo) 
+
+Install Docker Engine and the Compose plugin:
+
+bash
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+This command installs the Docker daemon, CLI, containerd runtime, and the Compose plugin (which provides the docker compose command) .
+
+Option B: For Ubuntu / Debian
+If your server runs Ubuntu or Debian:
+
+Install prerequisites:
+
+bash
+sudo apt update
+sudo apt install ca-certificates curl
+Add Docker's official GPG key and repository:
+
+bash
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+Install Docker Engine and the Compose plugin:
+
+bash
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```[citation:3][citation:15]
+▶️ Start the Docker Service
+After the packages are installed, start the Docker service and enable it to launch at boot:
+
+bash
+# Start Docker and enable it on boot
+sudo systemctl enable --now docker
+If you prefer to start it separately:
+
+bash
+sudo systemctl start docker
+sudo systemctl enable docker
+
+✅ Verification
+Confirm that Docker is installed and running correctly:
+
+Check the service status:
+
+bash
+sudo systemctl status docker
+Run the hello-world container:
+
+bash
+sudo docker run hello-world
+Verify the Docker Compose plugin:
+
+bash
+docker compose version
+```[citation:3][citation:8][citation:18]  
