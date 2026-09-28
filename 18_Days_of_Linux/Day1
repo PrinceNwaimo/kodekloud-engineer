@@ -1,0 +1,79 @@
+In response to heightened security concerns, the xFusionCorp Industries security team has opted for custom Apache users for their web applications. 
+Each user is tailored specifically for an application, enhancing security measures. 
+Your task is to create a custom Apache user according to the outlined specifications:
+
+a. Create a user named mark on App server 3 within the Stratos Datacenter.
+
+b. Assign a unique UID 1517 and designate the home directory as /var/www/mark.
+
+SOLUTION
+Steps to Create the Custom Apache User
+First, SSH into App server 3:
+
+bash
+ssh username@app-server-3
+# Or use the specific hostname/IP provided in your environment
+Switch to root or use sudo:
+
+bash
+sudo su -
+# Or prefix all commands with sudo
+Create the user mark with UID 1517 and home directory /var/www/mark:
+
+bash
+useradd -u 1517 -d /var/www/mark -m mark
+Explanation of flags:
+
+-u 1517 → Sets the unique UID to 1517
+
+-d /var/www/mark → Sets the home directory to /var/www/mark
+
+-m → Creates the home directory if it doesn't exist
+
+mark → The username
+
+Verify the user was created correctly:
+
+bash
+id mark
+Expected output:
+
+text
+uid=1517(mark) gid=1517(mark) groups=1517(mark)
+Verify the home directory:
+
+bash
+ls -ld /var/www/mark
+Expected output:
+
+text
+drwx------ 2 mark mark 4096 ... /var/www/mark
+If needed for Apache to serve content, set appropriate permissions:
+
+bash
+chmod 755 /var/www/mark
+chown mark:mark /var/www/mark
+Optional: Configure Apache to Run as This User
+If you want Apache to actually run as this user, you would need to edit the Apache configuration:
+
+bash
+# Edit the Apache config file
+vi /etc/httpd/conf/httpd.conf   # On RHEL/CentOS
+# or
+vi /etc/apache2/apache2.conf    # On Debian/Ubuntu
+Change:
+
+text
+User apache
+Group apache
+To:
+
+text
+User mark
+Group mark
+Then restart Apache:
+
+bash
+systemctl restart httpd    # RHEL/CentOS
+# or
+systemctl restart apache2  # Debian/Ubuntu
