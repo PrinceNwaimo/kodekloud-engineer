@@ -1,0 +1,73 @@
+The Nautilus DevOps team is conducting application deployment tests on selected application servers. 
+They require a nginx container deployment on Application Server 3. 
+Complete the task with the following instructions:
+
+On Application Server 3 create a container named nginx_3 using the nginx image with the alpine tag. Ensure container is in a running state.
+
+SOLUTION
+To complete this task, you'll need to work on Application Server 3 (stapp03) in the Stratos Datacenter.
+
+🔑 Server Credentials
+App Server 3 (stapp03): User banner, Password BigGr33n
+
+🛠️ Step-by-Step Implementation
+1. Connect to Application Server 3
+From the jump host, SSH into stapp03:
+
+bash
+ssh banner@stapp03
+# Enter password: BigGr33n
+2. Switch to root (or use sudo)
+Docker commands typically require root privileges or membership in the docker group. Switch to root to avoid permission issues:
+
+bash
+sudo su -
+3. Verify Docker is available
+Check that Docker is installed and the daemon is running:
+
+bash
+docker --version
+systemctl status docker
+4. Pull the nginx:alpine image (optional but recommended)
+Pulling the image first ensures you get a clean deployment and can catch any network issues early:
+
+bash
+docker pull nginx:alpine
+5. Create and run the container
+Run the container in detached mode (-d) with the name nginx_3, using the nginx:alpine image:
+
+bash
+docker run -d --name nginx_3 nginx:alpine
+6. Verify the container is running
+Confirm the container is up and in a running state:
+
+bash
+docker ps
+You should see output similar to:
+
+text
+CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS     NAMES
+a1b2c3d4e5f6   nginx:alpine   "/docker-entrypoint.…"   5 seconds ago   Up 5 seconds   80/tcp    nginx_3
+You can also verify with:
+
+bash
+docker ps -a --filter "name=nginx_3"
+⚠️ Important Notes
+Container name: Must be exactly nginx_3 — Docker container names are case-sensitive.
+
+Image tag: Use nginx:alpine (not just nginx, which would pull latest).
+
+Detached mode: The -d flag is required; without it, the container would run in the foreground and block your terminal.
+
+No port mapping needed: The task only requires the container to be running, not accessible externally. If port mapping were needed, you would add -p <host_port>:80.
+
+✅ Final Verification
+Run this one-liner to confirm everything is correct:
+
+bash
+docker inspect --format='{{.Name}} - {{.State.Status}} - {{.Config.Image}}' nginx_3
+Expected output:
+
+text
+/nginx_3 - running - nginx:alpine
+Once you see the container in a running state, the task is complete.
