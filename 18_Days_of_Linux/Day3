@@ -1,0 +1,82 @@
+To accommodate the backup agent tool's specifications, the system admin team at xFusionCorp Industries requires the creation of a user with a non-interactive shell. 
+Here's your task:
+
+Create a user named kareem with a non-interactive shell on App Server 3.
+
+SOLUTION
+
+To complete this task, you'll need to work on Application Server 3 (stapp03) in the Stratos Datacenter.
+
+🔑 Server Credentials
+App Server 3 (stapp03): User banner, Password BigGr33n
+
+🛠️ Step-by-Step Implementation
+1. Connect to Application Server 3
+From the jump host, SSH into stapp03:
+
+bash
+ssh banner@stapp03
+# Enter password: BigGr33n
+2. Switch to root
+Creating users requires administrative privileges, so switch to the root user:
+
+bash
+sudo su -
+3. Verify the available non-interactive shells
+Before creating the user, confirm which non-interactive shells exist on the system:
+
+bash
+cat /etc/shells
+Common non-interactive shells include:
+
+/sbin/nologin — Most common on RHEL/CentOS-based systems (used by this environment)
+
+/usr/sbin/nologin — Common on Debian/Ubuntu-based systems
+
+/bin/false — Another option that simply exits
+
+4. Create the user kareem with a non-interactive shell
+Use useradd with the -s (shell) flag to specify a non-interactive shell. On this system, use /sbin/nologin:
+
+bash
+useradd -s /sbin/nologin kareem
+If /sbin/nologin doesn't exist, use /bin/false instead:
+
+bash
+useradd -s /bin/false kareem
+5. Set a password (optional but recommended)
+In some grading environments, a password may be required. Set one with:
+
+bash
+echo "kareem:somepassword" | chpasswd
+6. Verify the user was created correctly
+Confirm the user exists and has the correct shell assigned:
+
+bash
+grep kareem /etc/passwd
+Expected output (the last field after the colon is the shell):
+
+text
+kareem:x:1002:1002::/home/kareem:/sbin/nologin
+You can also verify with:
+
+bash
+id kareem
+getent passwd kareem
+⚠️ Important Notes
+Non-interactive shell: The key requirement is the shell field in /etc/passwd must point to nologin or false, not /bin/bash or /bin/sh.
+
+Why this matters: Non-interactive shells prevent the user from logging in interactively (e.g., via SSH), which is ideal for service accounts or backup agents that only need to run specific processes.
+
+Testing: If you attempt to su - kareem, you should see a message like "This account is currently not available" — this confirms the non-interactive shell is working correctly.
+
+✅ Final Verification
+Run this one-liner to confirm everything is correct:
+
+bash
+getent passwd kareem | cut -d: -f1,7
+Expected output:
+
+text
+kareem:/sbin/nologin
+Once the user kareem exists with a non-interactive shell on App Server 3, the task is complete.
