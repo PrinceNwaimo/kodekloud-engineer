@@ -1,0 +1,73 @@
+In response to the latest tool implementation at xFusionCorp Industries, the system admins require the creation of a service user account.
+Here are the specifics:
+
+Create a user named james in App Server 1 without a home directory.
+
+SOLUTION
+To complete this task, you'll need to work on Application Server 1 (stapp01) in the Stratos Datacenter.
+
+🔑 Server Credentials
+App Server 1 (stapp01): User tony, Password Ir0nM@n
+
+🛠️ Step-by-Step Implementation
+1. Connect to Application Server 1
+From the jump host, SSH into stapp01:
+
+bash
+ssh tony@stapp01
+# Enter password: Ir0nM@n
+2. Switch to root
+Creating users requires administrative privileges, so switch to the root user:
+
+bash
+sudo su -
+3. Create the user james without a home directory
+Use the useradd command with the -M flag, which tells the system not to create a home directory for the user:
+
+bash
+useradd -M james
+Note: By default, useradd creates a home directory under /home/<username>. The -M flag overrides this behavior.
+
+4. Set a password (optional but recommended)
+In some grading environments, a password may be required. Set one with:
+
+bash
+echo "james:somepassword" | chpasswd
+5. Verify the user was created correctly
+Confirm the user exists and that no home directory was created:
+
+bash
+# Check the user entry in /etc/passwd
+grep james /etc/passwd
+
+# Confirm the home directory does NOT exist
+ls -ld /home/james
+Expected output for grep:
+
+text
+james:x:1002:1002::/home/james:/bin/bash
+Expected output for ls -ld /home/james:
+
+text
+ls: cannot access '/home/james': No such file or directory
+The second command confirming "No such file or directory" proves the home directory was not created — which is exactly what the task requires.
+
+⚠️ Important Notes
+-M vs -m: The lowercase -m flag forces creation of a home directory, while the uppercase -M flag prevents it. Be careful with case sensitivity.
+
+/etc/passwd still shows a path: Even without a home directory, the /etc/passwd file will still list /home/james as the home field. This is normal — the field simply indicates where the home would be, but the directory itself is not created.
+
+Service accounts: Users without home directories are typically used for service accounts, daemons, or automated tools that don't need a personal login environment.
+
+✅ Final Verification
+Run this one-liner to confirm everything is correct:
+
+bash
+id james && [ ! -d /home/james ] && echo "SUCCESS: User james exists with no home directory"
+Expected output:
+
+text
+uid=1002(james) gid=1002(james) groups=1002(james)
+SUCCESS: User james exists with no home directory
+Once the user james exists without a home directory on App Server 1, the task is complete.
+
