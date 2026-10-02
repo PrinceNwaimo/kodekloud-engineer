@@ -1,0 +1,72 @@
+As part of the temporary assignment to the Nautilus project, a developer named mariyam requires access for a limited duration. 
+To ensure smooth access management, a temporary user account with an expiry date is needed. 
+Here's what you need to do:
+
+Create a user named mariyam on App Server 2 in Stratos Datacenter. 
+Set the expiry date to 2027-01-28, ensuring the user is created in lowercase as per standard protocol.
+
+SOLUTION
+To complete this task, you'll need to work on Application Server 2 (stapp02) in the Stratos Datacenter.
+
+🔑 Server Credentials
+App Server 2 (stapp02): User steve, Password Am3ric@
+
+🛠️ Step-by-Step Implementation
+1. Connect to Application Server 2
+From the jump host, SSH into stapp02:
+
+bash
+ssh steve@stapp02
+# Enter password: Am3ric@
+2. Switch to root
+Creating users requires administrative privileges:
+
+bash
+sudo su -
+3. Create the user mariyam with the expiry date
+Use the useradd command with the -e flag to set the account expiration date. The date format is YYYY-MM-DD:
+
+bash
+useradd -e 2027-01-28 mariyam
+4. Set a password (optional but recommended)
+In some environments, a password may be required:
+
+bash
+echo "mariyam:somepassword" | chpasswd
+5. Verify the user was created correctly
+Confirm the user exists and check the expiry date:
+
+bash
+# Check the user entry in /etc/passwd
+grep mariyam /etc/passwd
+
+# Verify the expiry date in /etc/shadow (the 8th field is expiry days since epoch)
+chage -l mariyam
+Expected output from chage -l mariyam:
+
+text
+Last password change                                    : Oct 02, 2026
+Password expires                                        : never
+Password inactive                                       : never
+Account expires                                         : Jan 28, 2027
+Minimum number of days between password change          : 0
+Maximum number of days between password change          : 99999
+Number of days of warning before password expires       : 7
+⚠️ Important Notes
+Date format: The -e option requires the YYYY-MM-DD format.
+
+Lowercase username: The username mariyam is already lowercase, which aligns with standard Linux protocol.
+
+Account expiry vs password expiry: The -e option sets the account expiry date, after which the user cannot log in at all. This is different from password expiry (which is controlled by chage -M).
+
+✅ Final Verification
+Run this one-liner to confirm everything is correct:
+
+bash
+id mariyam && chage -l mariyam | grep "Account expires"
+Expected output:
+
+text
+uid=1002(mariyam) gid=1002(mariyam) groups=1002(mariyam)
+Account expires                                         : Jan 28, 2027
+Once the user mariyam exists with the expiry date set to 2027-01-28 on App Server 2, the task is complete.
