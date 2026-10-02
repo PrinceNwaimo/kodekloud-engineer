@@ -1,0 +1,176 @@
+An issue has arisen with a static website running in a container named nautilus on App Server 1. 
+To resolve the issue, investigate the following details:
+
+Check if the container's volume /usr/local/apache2/htdocs is correctly mapped with the host's volume /var/www/html.
+
+Verify that the website is accessible on host port 8085 on App Server 1. Confirm that the command curl http://localhost:8085/ works on App Server 1.
+
+SOLUTION
+🔑 Server Credentials
+App Server 1 (stapp01): User tony, Password Ir0nM@n
+
+🛠️ Step-by-Step Investigation
+1. Connect to Application Server 1
+From the jump host, SSH into stapp01:
+
+bash
+ssh tony@stapp01
+# Enter password: Ir0nM@n
+2. Switch to root
+Docker commands typically require root privileges:
+
+bash
+sudo su -
+🔍 Step 1: Check the Volume Mapping
+Verify that the container's volume /usr/local/apache2/htdocs is correctly mapped to the host's /var/www/html.
+
+Check the container's volume configuration:
+
+bash
+docker inspect nautilus --format '{{json .Mounts}}' | python -m json.tool
+Or for a simpler view:
+
+bash
+docker inspect nautilus | grep -A 10 "Mounts"
+Expected output should show the mapping:
+
+json
+[
+    {
+        "Type": "bind",
+        "Source": "/var/www/html",
+        "Destination": "/usr/local/apache2/htdocs",
+        "Mode": "",
+        "RW": true,
+        "Propagation": "rprivate"
+    }
+]
+Key things to verify:
+
+Source should be /var/www/html (host path)
+
+Destination should be /usr/local/apache2/htdocs (container path)
+
+RW: true indicates read-write access
+
+You can also use docker inspect with a cleaner format:
+
+bash
+docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}' nautilus
+Expected output:
+
+text
+/var/www/html -> /usr/local/apache2/htdocs
+If the volume is NOT mapped correctly, you would need to recreate the container with the proper mapping:
+
+bash
+docker rm -f nautilus
+docker run -d --name nautilus -p 8085:80 -v /var/www/html:/usr/local/apache2/htdocs httpd
+🔍 Step 2: Verify Website Accessibility on Host Port 8085
+Check the port mapping:
+
+bash
+docker port nautilus
+Expected output:
+
+text
+80/tcp -> 0.0.0.0:8085
+Or check with docker ps:
+
+bash
+docker ps --filter "name=nautilus" --format "table {{.Names}}\t{{.Ports}}"
+Expected output:
+
+text
+NAMES      PORTS
+nautilus   0.0.0.0:8085->80/tcp
+Check if the container is running:
+
+bash
+docker ps | grep nautilus
+If the container is not running, start it:
+
+bash
+docker start nautilus
+🔍 Step 3: Test with curl
+Run the curl command on App Server 1:
+
+bash
+curl http://localhost:8085/
+Expected output should be the HTML content of the static website, for example:
+
+html
+<html>
+<body>
+<h1>Welcome to the Nautilus Project</h1>
+</body>
+</html>
+If you get a connection refused error, check:
+
+Container is running: docker ps | grep nautilus
+
+Port mapping is correct: docker port nautilus
+
+No firewall blocking: systemctl status firewalld (or check iptables -L)
+
+The web server inside the container is running:
+
+bash
+docker exec nautilus ps aux | grep httpd
+Verbose curl for debugging:
+
+bash
+curl -v http://localhost:8085/
+You can also check the HTTP status code:
+
+bash
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8085/
+Expected output:
+
+text
+200
+📋 Summary of Investigation Commands
+Run this combined verification block:
+
+bash
+echo "=== Container Status ==="
+docker ps | grep nautilus
+
+echo ""
+echo "=== Volume Mapping ==="
+docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}' nautilus
+
+echo ""
+echo "=== Port Mapping ==="
+docker port nautilus
+
+echo ""
+echo "=== Curl Test ==="
+curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:8085/
+Expected combined output:
+
+text
+=== Container Status ===
+abc123def456   httpd   "httpd-foreground"   5 minutes ago   Up 5 minutes   0.0.0.0:8085->80/tcp   nautilus
+
+=== Volume Mapping ===
+/var/www/html -> /usr/local/apache2/htdocs
+
+=== Port Mapping ===
+80/tcp -> 0.0.0.0:8085
+
+=== Curl Test ===
+HTTP Status: 200
+⚠️ Common Issues and Fixes
+Issue	Symptom	Fix
+Container not running	docker ps shows nothing	docker start nautilus
+Wrong volume mapping	docker inspect shows different paths	Recreate container with -v /var/www/html:/usr/local/apache2/htdocs
+Wrong port mapping	docker port shows different port	Recreate container with -p 8085:80
+Empty website content	curl returns empty or 403	Check /var/www/html has content on host
+Firewall blocking	Connection refused from external	Open port: firewall-cmd --add-port=8085/tcp --permanent && firewall-cmd --reload
+✅ Task Completion Checklist
+☑ Container nautilus is running on App Server 1
+☑ Volume /var/www/html (host) is mapped to /usr/local/apache2/htdocs (container)
+☑ Host port 8085 is mapped to container port 80
+☑ curl http://localhost:8085/ returns the website content successfully (HTTP 200)
+Once all four checks pass, the investigation is complete and the static website issue is resolved.
