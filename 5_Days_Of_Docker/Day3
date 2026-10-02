@@ -1,0 +1,75 @@
+The Nautilus DevOps team possesses confidential data on App Server 2 in the Stratos Datacenter. 
+A container named ubuntu_latest is running on the same server.
+
+Copy an encrypted file /tmp/nautilus.txt.gpg from the docker host to the ubuntu_latest container located at /tmp/. Ensure the file is not modified during this operation.
+To complete this task, you'll need to work on Application Server 2 (stapp02) in the Stratos Datacenter.
+
+SOLUTION
+
+🔑 Server Credentials
+App Server 2 (stapp02): User steve, Password Am3ric@
+
+🛠️ Step-by-Step Implementation
+1. Connect to Application Server 2
+From the jump host, SSH into stapp02:
+
+bash
+ssh steve@stapp02
+# Enter password: Am3ric@
+2. Switch to root
+Docker commands typically require root privileges:
+
+bash
+sudo su -
+3. Verify the source file exists
+Check that the encrypted file is present on the Docker host:
+
+bash
+ls -l /tmp/nautilus.txt.gpg
+4. Verify the target container is running
+Confirm the ubuntu_latest container is up:
+
+bash
+docker ps | grep ubuntu_latest
+5. Copy the file into the container
+Use docker cp to copy the file from the host into the container at /tmp/. This command preserves the file contents exactly, ensuring it is not modified:
+
+bash
+docker cp /tmp/nautilus.txt.gpg ubuntu_latest:/tmp/
+6. Verify the file was copied successfully
+Check that the file exists inside the container:
+
+bash
+docker exec ubuntu_latest ls -l /tmp/nautilus.txt.gpg
+🔍 Ensuring the File is Not Modified
+The docker cp command performs a byte-for-byte copy — it does not alter the file in any way. To be extra certain the file wasn't modified, compare checksums:
+
+bash
+# Checksum on the host
+md5sum /tmp/nautilus.txt.gpg
+
+# Checksum inside the container
+docker exec ubuntu_latest md5sum /tmp/nautilus.txt.gpg
+Both outputs should match exactly, proving the file was transferred without modification.
+
+⚠️ Important Notes
+docker cp is the correct tool: Unlike docker exec with redirection (e.g., cat file | docker exec -i ...), docker cp preserves the file exactly as-is, including permissions, timestamps, and binary content — no shell interpretation or encoding issues.
+
+Trailing slash matters: ubuntu_latest:/tmp/ (with trailing slash) copies the file into the /tmp/ directory. Without the trailing slash, Docker would treat /tmp as the destination filename, which could cause issues if /tmp is a directory.
+
+Encrypted binary files: Since the file is GPG-encrypted (binary), avoid any method that involves piping through a shell — this could corrupt the binary data. docker cp handles this safely.
+
+Container must be running: docker cp works on running containers. If the container were stopped, you'd use docker cp with the container ID (it still works on stopped containers), but since the task specifies the container is running, this isn't a concern.
+
+✅ Final Verification
+Run this one-liner to confirm everything is correct:
+
+bash
+docker exec ubuntu_latest ls -l /tmp/nautilus.txt.gpg && echo "SUCCESS: File copied to container"
+Expected output:
+
+text
+-rw-r--r-- 1 root root 1234 Oct  2 10:00 /tmp/nautilus.txt.gpg
+SUCCESS: File copied to container
+Once the file /tmp/nautilus.txt.gpg exists inside the ubuntu_latest container at /tmp/ and matches the host checksum, the task is complete.
+
