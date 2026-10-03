@@ -1,0 +1,166 @@
+Due to an accidental data mix-up, user data was unintentionally mingled on Nautilus App Server 2 at the /home/usersdata location by the Nautilus production support team in Stratos DC. 
+To rectify this, specific user data needs to be filtered and relocated. 
+Here are the details:
+
+Locate all files (excluding directories) owned by user rose within the /home/usersdata directory on App Server 2. 
+Copy these files while preserving the directory structure to the /beta directory.
+
+SOLUTION
+To complete this task, you'll need to work on Application Server 2 (stapp02) in the Stratos Datacenter.
+
+🔑 Server Credentials
+App Server 2 (stapp02): User steve, Password Am3ric@
+
+🛠️ Step-by-Step Implementation
+1. Connect to Application Server 2
+From the jump host, SSH into stapp02:
+
+bash
+ssh steve@stapp02
+# Enter password: Am3ric@
+2. Switch to root
+Copying files with preserved ownership/structure may require root privileges:
+
+bash
+sudo su -
+3. Explore the source directory
+First, understand what we're working with:
+
+bash
+ls -l /home/usersdata/
+4. Locate all files owned by rose (excluding directories)
+Use find with the -type f flag to match files only, and -user rose to filter by owner:
+
+bash
+find /home/usersdata -type f -user rose
+This lists all files owned by rose recursively. Review the output before copying.
+
+5. Create the destination directory
+
+bash
+mkdir -p /beta
+6. Copy the files while preserving the directory structure
+
+There are two common approaches:
+
+Option A — Using find with -exec cp --parents (recommended)
+The --parents flag preserves the full source path structure when copying:
+
+bash
+find /home/usersdata -type f -user rose -exec cp --parents {} /beta \;
+Option B — Using cpio (alternative, preserves structure well)
+
+bash
+find /home/usersdata -type f -user rose | cpio -pdm /beta
+Where:
+
+-p → pass-through mode (copy)
+
+-d → create leading directories as needed
+
+-m → preserve modification times
+
+Option A is simpler and more commonly used for this type of task.
+
+🔍 How --parents Works
+Given a file like /home/usersdata/rose/docs/report.txt, running:
+
+bash
+cp --parents /home/usersdata/rose/docs/report.txt /beta
+creates:
+
+text
+/beta/home/usersdata/rose/docs/report.txt
+This preserves the full directory structure relative to the root, which is the standard interpretation for "preserving directory structure" tasks in these environments.
+
+⚠️ Important Notes
+-type f is critical: Without it, find would also match directories owned by rose, and you'd copy empty directory trees or get errors.
+
+-user rose vs -owner rose: Both work, but -user is more portable across systems.
+
+Trailing slash in {}: Avoid writing {}/ — it can cause issues with cp --parents. Use {} as shown.
+
+Semicolon escaping: The \; at the end of -exec is required; without it, the shell will interpret ; as a command separator.
+
+Permissions: If you get "Permission denied" errors, ensure you're running as root (which you should be after sudo su -).
+
+✅ Step 7: Verify the Result
+Count the files copied from source vs. destination:
+
+bash
+# Files owned by rose in source
+find /home/usersdata -type f -user rose | wc -l
+
+# Files in destination
+find /beta -type f | wc -l
+Both numbers should match.
+
+Verify the directory structure is preserved:
+
+bash
+find /beta -type f -user rose
+You should see paths like:
+
+text
+/beta/home/usersdata/rose/...
+/beta/home/usersdata/rose/subdir/...
+Verify ownership was preserved (if you used cp without -p, ownership may differ — but the task only requires preserving structure, not ownership):
+
+bash
+ls -lR /beta | head -50
+✅ Final One-Liner Verification
+bash
+echo "=== Source file count ==="
+find /home/usersdata -type f -user rose | wc -l
+echo "=== Destination file count ==="
+find /beta -type f | wc -l
+echo "=== Sample of copied files ==="
+find /beta -type f | head -10
+If the counts match and the structure mirrors /home/usersdata/..., the task is complete.
+
+📌 Quick Reference — Full Command Sequence
+bash
+ssh steve@stapp02
+sudo su -
+mkdir -p /beta
+find /home/usersdata -type f -user rose -exec cp --parents {} /beta \;
+find /home/usersdata -type f -user rose | wc -l
+find /beta -type f | wc -l
+Once verified, the relocated files owned by rose will exist under /beta with their original directory structure intact.
+
+[root@stapp02 ~]# find /home/usersdata -type f -user rose -exec cp --parents {} /beta \;
+[root@stapp02 ~]#
+The copy command ran without errors. Now let's verify the operation succeeded and the files landed in /beta with the correct structure.
+
+✅ Verification Commands
+Run these to confirm everything worked:
+
+bash
+echo "=== Source: files owned by rose ==="
+find /home/usersdata -type f -user rose | wc -l
+
+echo ""
+echo "=== Destination: files in /beta ==="
+find /beta -type f | wc -l
+
+echo ""
+echo "=== Structure preview in /beta ==="
+find /beta -type f | head -20
+
+echo ""
+echo "=== Confirm all copied files are owned by rose in source ==="
+find /beta -type f -path "*/home/usersdata/*"
+📋 What to Look For
+Matching counts — The number of files in /beta should equal the number of files owned by rose in /home/usersdata.
+
+Preserved structure — Files in /beta should mirror the source layout:
+
+text
+/beta/home/usersdata/rose/...
+/beta/home/usersdata/rose/subdir/...
+(Note: cp --parents preserves the full absolute path starting from /, so files appear under /beta/home/usersdata/...)
+
+No errors — Your command returned silently, which means cp succeeded with no permission issues.
+
+Please paste the output of the verification block above. If the counts match and the structure looks correct, the task is complete. If the destination structure looks different from what's expected (e.g., you expected files directly under /beta without the home/usersdata prefix), let me know and I can help adjust.
+
