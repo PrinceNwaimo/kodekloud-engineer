@@ -1,0 +1,79 @@
+The jump host server hosts a directory named /data, serving as a repository for various developers non-confidential data. 
+Developer ammar has requested a copy of their data stored in /data/ammar. 
+The System Admin team has provided the following steps to fulfill this request:
+
+a. Create a compressed archive named ammar.tar.gz of the /data/ammar directory.
+
+b. Transfer the archive to the /home directory on the Jump Host Server.
+SOLUTION
+Steps to Complete the Task
+1. Create a compressed archive of /data/ammar
+Use the tar command with gzip compression:
+
+bash
+sudo tar -czvf /tmp/ammar.tar.gz -C /data ammar
+Explanation of flags:
+
+-c → Create a new archive
+
+-z → Compress with gzip
+
+-v → Verbose (show progress)
+
+-f → Specify the archive filename
+
+-C /data ammar → Change to /data directory first, then archive the ammar folder (this avoids including the full /data/ path in the archive)
+
+Alternative (simpler) command:
+
+bash
+sudo tar -czvf /tmp/ammar.tar.gz /data/ammar
+⚠️ Note: The first command is preferred because it stores the archive with relative paths (ammar/...) rather than absolute paths (/data/ammar/...). This is cleaner when extracting later.
+
+2. Transfer the archive to /home on the Jump Host Server
+Since you're already on the Jump Host Server, you just need to move/copy the archive to /home:
+
+bash
+sudo mv /tmp/ammar.tar.gz /home/
+Or if you want to keep a copy in /tmp as well:
+
+bash
+sudo cp /tmp/ammar.tar.gz /home/
+3. Verify the archive was created and transferred
+bash
+# Verify the archive exists in /home
+ls -lh /home/ammar.tar.gz
+
+# (Optional) Verify the contents of the archive
+tar -tzf /home/ammar.tar.gz
+4. Set appropriate ownership (optional but recommended)
+If the archive should be owned by a specific user (e.g., root or ammar):
+
+bash
+sudo chown root:root /home/ammar.tar.gz
+✅ One-Liner Solution
+If you want to do it all in one go:
+
+bash
+sudo tar -czvf /home/ammar.tar.gz -C /data ammar
+This creates the archive directly in /home with the correct relative paths, avoiding the need to move it afterward.
+
+🔍 Verification Checklist
+After completing the task, confirm:
+
+bash
+# 1. Check the archive exists
+ls -lh /home/ammar.tar.gz
+
+# Expected output (example):
+# -rw-r--r-- 1 root root 2.5K Oct  7 10:30 /home/ammar.tar.gz
+
+# 2. List contents to confirm the correct data was archived
+tar -tzf /home/ammar.tar.gz
+
+# Expected output (example):
+# ammar/
+# ammar/file1.txt
+# ammar/file2.txt
+The task is complete once /home/ammar.tar.gz exists and contains the contents of /data/ammar.
+
