@@ -1,0 +1,261 @@
+After conducting a security audit within the Stratos DC, the Nautilus security team discovered misconfigured permissions on critical files. 
+To address this, corrective actions are being taken by the production support team. 
+Specifically, the file named /etc/hosts on Nautilus App 2 server requires adjustments to its Access Control Lists (ACLs) as follows:
+
+1. The file's user owner and group owner should be set to root.
+
+2. Others should possess read only permissions on the file.
+
+3. User mariyam must not have any permissions on the file.
+
+4. User ryan should be granted read only permission on the file.
+
+SOLUTION
+Steps to Complete the Task
+1. SSH into App Server 3
+bash
+ssh username@app-server-3
+# Or use the specific hostname/IP provided in your environment
+2. Verify the script exists
+bash
+ls -l /tmp/xfusioncorp.sh
+You'll likely see something like:
+
+text
+-rw-r--r-- 1 root root 1234 Oct  8 10:30 /tmp/xfusioncorp.sh
+Notice there are no x (execute) permissions yet.
+
+3. Grant executable permissions to ALL users
+Use chmod with the a+x flag (where a = all users: owner, group, others):
+
+bash
+sudo chmod a+x /tmp/xfusioncorp.sh
+Alternative equivalent commands:
+
+bash
+# Using symbolic mode
+sudo chmod +x /tmp/xfusioncorp.sh
+
+# Using octal mode (adds execute to rw-r--r-- → rwxr-xr-x)
+sudo chmod 755 /tmp/xfusioncorp.sh
+💡 Note: chmod +x (without specifying who) applies execute permission to all users by default (subject to umask), so it achieves the same result as a+x.
+
+4. Verify the permissions
+bash
+ls -l /tmp/xfusioncorp.sh
+Expected output:
+
+text
+-rwxr-xr-x 1 root root 1234 Oct  8 10:30 /tmp/xfusioncorp.sh
+The x in positions for owner, group, and others confirms all users can execute the script. ✅
+
+✅ One-Liner Solution
+bash
+sudo chmod +x /tmp/xfusioncorp.sh
+🔍 Optional: Test the Script
+To confirm it actually executes:
+
+bash
+/tmp/xfusioncorp.sh
+# Or
+bash /tmp/xfusioncorp.sh
+📝 Quick Reference: Permission Modes
+Mode	Symbolic	Meaning
+755	rwxr-xr-x	Owner: rwx, Group: r-x, Others: r-x
++x	adds x to all	Everyone can execute
+a+x	adds x to all	Explicitly everyone can execute
+u+x	adds x to owner only	Only owner can execute
+o+x	adds x to others only	Only others can execute
+The task is complete once /tmp/xfusioncorp.sh shows -rwxr-xr-x (or any permission set where all three user classes have the x bit set).
+
+[banner@stapp03 ~]$ ls -l /tmp/xfusioncorp.sh
+---x--x--x 1 root root 40 Oct  8 19:33 /tmp/xfusioncorp.sh
+[banner@stapp03 ~]$ /tmp/xfusioncorp.sh
+# Or
+bash /tmp/xfusioncorp.sh
+/bin/bash: /tmp/xfusioncorp.sh: Permission denied
+bash: /tmp/xfusioncorp.sh: Permission denied
+[banner@stapp03 ~]$ sudo chmod +x /tmp/xfusioncorp.sh
+[banner@stapp03 ~]$ ls -l /tmp/xfusioncorp.sh
+---x--x--x 1 root root 40 Oct  8 19:33 /tmp/xfusioncorp.sh
+[banner@stapp03 ~]$ sudo chmod +x /tmp/xfusioncorp.sh
+[banner@stapp03 ~]$ ls -l /tmp/xfusioncorp.sh
+---x--x--x 1 root root 40 Oct  8 19:33 /tmp/xfusioncorp.sh
+[banner@stapp03 ~]$ /tmp/xfusioncorp.sh
+# Or
+bash /tmp/xfusioncorp.sh
+/bin/bash: /tmp/xfusioncorp.sh: Permission denied
+bash: /tmp/xfusioncorp.sh: Permission denied
+[banner@stapp03 ~]$ /tmp/xfusioncorp.sh
+/bin/bash: /tmp/xfusioncorp.sh: Permission denied
+[banner@stapp03 ~]$ bash /tmp/xfusioncorp.sh
+bash: /tmp/xfusioncorp.sh: Permission denied
+[banner@stapp03 ~]$ ls -l /tmp/xfusioncorp.sh
+---x--x--x 1 root root 40 Oct  8 19:33 /tmp/xfusioncorp.sh
+[banner@stapp03 ~]$
+I can see the issue now. The file permissions are ---x--x--x, which means:
+
+Owner (root): --x (execute only — no read, no write)
+
+Group: --x (execute only)
+
+Others: --x (execute only)
+
+The problem is that no one has READ permission on the file. Even though the execute bit is set, a shell script needs to be readable by the user running it (or by the shell/interpreter) to actually execute.
+
+When you run bash /tmp/xfusioncorp.sh, bash tries to read the file — but it can't, hence "Permission denied."
+
+🔧 The Fix
+You need to add read permission for all users (or at least give read + execute):
+
+bash
+sudo chmod +rx /tmp/xfusioncorp.sh
+This adds read (r) and execute (x) for all users. The result will be:
+
+text
+-r-xr-xr-x 1 root root 40 Oct  8 19:33 /tmp/xfusioncorp.sh
+Or, if you want to match the typical expected permission set (rwxr-xr-x):
+
+bash
+sudo chmod 755 /tmp/xfusioncorp.sh
+Why chmod +x didn't work
+chmod +x only adds the execute bit. Since the file already had x for all users, the command had no effect — it didn't touch the missing read bits.
+
+✅ Verify and Test
+bash
+ls -l /tmp/xfusioncorp.sh
+cat /tmp/xfusioncorp.sh
+/tmp/xfusioncorp.sh
+After the fix, you should see something like:
+
+text
+-r-xr-xr-x 1 root root 40 Oct  8 19:33 /tmp/xfusioncorp.sh
+And the script should execute without errors.
+
+📝 Summary
+Command	Effect
+chmod +x	Adds execute only (no effect if x already present)
+chmod +rx	Adds read and execute for all users ✅
+chmod 755	Sets rwxr-xr-x — full standard permissions ✅
+chmod 555	Sets r-xr-xr-x — read+execute for all, no write
+Run this to complete the task:
+
+bash
+sudo chmod 755 /tmp/xfusioncorp.sh
+After conducting a security audit within the Stratos DC, the Nautilus security team discovered misconfigured permissions on critical files. To address this, corrective actions are being taken by the production support team. Specifically, the file named /etc/hosts on Nautilus App 2 server requires adjustments to its Access Control Lists (ACLs) as follows:
+
+
+
+1. The file's user owner and group owner should be set to root.
+
+2. Others should possess read only permissions on the file.
+
+3. User mariyam must not have any permissions on the file.
+
+4. User ryan should be granted read only permission on the file.
+I'll help you configure the ACLs on /etc/hosts on Nautilus App 2 according to the specifications.
+
+Steps to Complete the Task
+1. SSH into Nautilus App 2
+bash
+ssh username@app-server-2
+# Or use the specific hostname/IP provided in your environment
+2. Set owner and group to root
+bash
+sudo chown root:root /etc/hosts
+3. Set "others" to read-only permissions
+Since others should have read-only, and typically owner (root) needs read+write for /etc/hosts, a common approach is 644:
+
+bash
+sudo chmod 644 /etc/hosts
+Permission breakdown for 644:
+
+Owner (root): rw- (read + write)
+
+Group (root): r-- (read only)
+
+Others: r-- (read only) ✅
+
+⚠️ Note: If the requirement strictly means only others get read, you might use 600 or 400. However, 644 is standard for /etc/hosts since root must be able to modify it. I'll proceed with 644 — adjust if your task specifies otherwise.
+
+4. Set ACL: mariyam has NO permissions
+bash
+sudo setfacl -m u:mariyam:--- /etc/hosts
+This explicitly grants mariyam no permissions (overriding any group/default permissions).
+
+5. Set ACL: ryan has read-only permission
+bash
+sudo setfacl -m u:ryan:r-- /etc/hosts
+6. Verify the ACL configuration
+bash
+sudo getfacl /etc/hosts
+Expected output should look like:
+
+text
+# file: etc/hosts
+# owner: root
+# group: root
+user::rw-
+user:mariyam:---
+user:ryan:r--
+group::r--
+mask::r--
+other::r--
+Key checks:
+
+✅ owner: root, group: root
+
+✅ other::r-- (others read-only)
+
+✅ user:mariyam:--- (mariyam no permissions)
+
+✅ user:ryan:r-- (ryan read-only)
+
+✅ One-Liner Sequence
+bash
+sudo chown root:root /etc/hosts && \
+sudo chmod 644 /etc/hosts && \
+sudo setfacl -m u:mariyam:--- /etc/hosts && \
+sudo setfacl -m u:ryan:r-- /etc/hosts && \
+sudo getfacl /etc/hosts
+📝 Important Notes
+About the ACL mask
+When you set an ACL entry, the mask is automatically recalculated. The mask defines the maximum effective permissions for named users, named groups, and the owning group.
+
+If your getfacl shows mask::---, then even ryan's r-- entry would be ineffective. To be safe, ensure the mask allows read:
+
+bash
+sudo setfacl -m m::r /etc/hosts
+Then verify:
+
+text
+user:mariyam:---
+user:ryan:r--
+mask::r--
+Removing mariyam's permissions entirely
+If the requirement means mariyam should not appear in the ACL at all (rather than having explicit ---), you would instead remove the entry:
+
+bash
+sudo setfacl -x u:mariyam /etc/hosts
+However, if mariyam is part of a group that has permissions, the explicit --- entry is the safer way to guarantee she has no access. The task wording ("must not have any permissions") is best satisfied with the explicit u:mariyam:--- entry.
+
+Verify with ls -l
+After setting ACLs, ls -l will show a + at the end of the permission string, indicating extended ACLs are present:
+
+text
+-rw-r--r--+ 1 root root ... /etc/hosts
+🔍 Full Verification Checklist
+bash
+# Check ownership
+ls -l /etc/hosts
+
+# Check ACLs
+getfacl /etc/hosts
+
+# Test as mariyam (should fail)
+sudo -u mariyam cat /etc/hosts
+
+# Test as ryan (should succeed)
+sudo -u ryan cat /etc/hosts
+The task is complete once getfacl confirms all four requirements are met.
+
