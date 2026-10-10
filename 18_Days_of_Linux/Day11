@@ -1,0 +1,96 @@
+At xFusionCorp Industries, the Stratos Datacenter houses a jump host server that stores template XML files essential for the Nautilus application. 
+Prior to their use, these files need to be populated with valid data. 
+As part of regular maintenance, the system administration team utilizes various string and file manipulation commands to prepare these templates.
+
+Your task is to substitute all occurrences of the string String with Echo-Location within the XML file located at /root/nautilus.xml on the jump host server.
+
+SOLUTION
+Steps to Complete the Task
+1. SSH into the Jump Host Server
+bash
+ssh username@jump-host-server
+# Or use the specific hostname/IP provided in your environment
+2. Switch to root (if needed)
+Since the file is at /root/nautilus.xml, you'll likely need root or sudo access:
+
+bash
+sudo su -
+# Or prefix commands with sudo
+3. Verify the file exists and check current occurrences
+bash
+ls -l /root/nautilus.xml
+grep -o "String" /root/nautilus.xml | wc -l
+This will show how many times String currently appears in the file.
+
+4. Substitute all occurrences of String with Echo-Location
+Use sed with the global (g) flag to replace all occurrences on every line:
+
+bash
+sudo sed -i 's/String/Echo-Location/g' /root/nautilus.xml
+Explanation of flags:
+
+-i → Edit the file in-place (modifies the original file directly)
+
+s/String/Echo-Location/g → Substitute String with Echo-Location globally (all occurrences per line)
+
+/root/nautilus.xml → Target file
+
+💡 Tip: If you want to create a backup before editing, use:
+
+bash
+sudo sed -i.bak 's/String/Echo-Location/g' /root/nautilus.xml
+This creates nautilus.xml.bak as a backup.
+
+5. Verify the substitution
+bash
+# Confirm no more "String" occurrences remain
+grep -c "String" /root/nautilus.xml
+
+# Confirm "Echo-Location" now appears
+grep -o "Echo-Location" /root/nautilus.xml | wc -l
+
+# View the modified file
+cat /root/nautilus.xml
+The grep -c "String" should return 0 (or nothing), and the count of Echo-Location should match the original count of String.
+
+✅ One-Liner Solution
+bash
+sudo sed -i 's/String/Echo-Location/g' /root/nautilus.xml
+📝 Alternative Approaches
+Using perl
+bash
+sudo perl -pi -e 's/String/Echo-Location/g' /root/nautilus.xml
+Using awk (writes to a new file, then replaces)
+bash
+sudo awk '{gsub(/String/,"Echo-Location")}1' /root/nautilus.xml > /tmp/nautilus.xml && sudo mv /tmp/nautilus.xml /root/nautilus.xml
+Case-insensitive replacement (if needed)
+bash
+sudo sed -i 's/String/Echo-Location/gi' /root/nautilus.xml
+⚠️ Important Considerations
+Special characters in the replacement
+Echo-Location contains a hyphen (-), which is safe in sed replacements. However, if your replacement string contained /, &, \, or other regex-special characters, you'd need to escape them or use a different delimiter:
+
+bash
+# Using a different delimiter (|) to avoid escaping slashes
+sudo sed -i 's|String|Echo-Location|g' /root/nautilus.xml
+Word boundary matching (optional)
+If you only want to replace the standalone word String (not substrings like StringBuffer), use word boundaries:
+
+bash
+sudo sed -i 's/\bString\b/Echo-Location/g' /root/nautilus.xml
+Based on the task wording ("all occurrences of the string String"), the straightforward global substitution without word boundaries is the expected solution.
+
+🔍 Final Verification Checklist
+bash
+# 1. Confirm ownership/permissions unchanged
+ls -l /root/nautilus.xml
+
+# 2. Confirm no "String" remains
+grep -n "String" /root/nautilus.xml
+
+# 3. Confirm "Echo-Location" is present
+grep -n "Echo-Location" /root/nautilus.xml
+
+# 4. Display the final file
+cat /root/nautilus.xml
+The task is complete once all instances of String have been replaced with Echo-Location in /root/nautilus.xml.
