@@ -1,0 +1,100 @@
+A Nautilus developer has stored confidential data on the jump host within Stratos DC. 
+To ensure security and compliance, this data must be transferred to one of the app servers. 
+Given developers lack direct access to these servers, the system admin team has been enlisted for assistance.
+
+Copy /tmp/nautilus.txt.gpg file from jump server to App Server 2 placing it in the directory /home/nfsdata.
+
+SOLUTION
+Steps to Complete the Task
+1. Verify the file exists on the Jump Host
+bash
+ls -l /tmp/nautilus.txt.gpg
+2. Check if /home/nfsdata exists on App Server 2
+bash
+ssh username@app-server-2 "ls -ld /home/nfsdata"
+If the directory doesn't exist, create it first:
+
+bash
+ssh username@app-server-2 "sudo mkdir -p /home/nfsdata"
+Replace username@app-server-2 with the actual user and hostname/IP for App Server 2 (e.g., banner@stapp02 or tony@stapp02).
+
+3. Copy the file using scp
+From the jump host, run:
+
+bash
+scp /tmp/nautilus.txt.gpg username@app-server-2:/home/nfsdata/
+Example with typical Nautilus naming:
+
+bash
+scp /tmp/nautilus.txt.gpg banner@stapp02:/home/nfsdata/
+If the destination directory requires root privileges, copy to /tmp first and then move it:
+
+bash
+# Step 1: Copy to a writable location
+scp /tmp/nautilus.txt.gpg banner@stapp02:/tmp/
+
+# Step 2: Move it to the final destination with sudo
+ssh banner@stapp02 "sudo mv /tmp/nautilus.txt.gpg /home/nfsdata/"
+4. Verify the file was transferred
+bash
+ssh username@app-server-2 "ls -l /home/nfsdata/nautilus.txt.gpg"
+You should see the file listed in /home/nfsdata/.
+
+✅ One-Liner Solution
+If you have permissions to write directly to /home/nfsdata:
+
+bash
+scp /tmp/nautilus.txt.gpg username@app-server-2:/home/nfsdata/
+If you need sudo on the destination:
+
+bash
+scp /tmp/nautilus.txt.gpg username@app-server-2:/tmp/ && \
+ssh username@app-server-2 "sudo mv /tmp/nautilus.txt.gpg /home/nfsdata/"
+📝 Alternative Approaches
+Using rsync (preserves attributes, good for large files)
+bash
+rsync -avz /tmp/nautilus.txt.gpg username@app-server-2:/home/nfsdata/
+Using sftp
+bash
+sftp username@app-server-2
+# Then at the sftp prompt:
+put /tmp/nautilus.txt.gpg /home/nfsdata/
+exit
+Using ssh + cat (if scp is restricted)
+bash
+cat /tmp/nautilus.txt.gpg | ssh username@app-server-2 "sudo tee /home/nfsdata/nautilus.txt.gpg > /dev/null"
+⚠️ Important Considerations
+SSH keys vs. passwords
+If passwordless SSH isn't set up, you'll be prompted for the password of the destination user. The Nautilus lab environments typically have SSH keys configured between the jump host and app servers, so scp should work without a password prompt.
+
+File permissions
+After copying, verify that the file has appropriate permissions:
+
+bash
+ssh username@app-server-2 "sudo chmod 600 /home/nfsdata/nautilus.txt.gpg"
+Since this is confidential data, restricting permissions to owner-only (600) is a good security practice.
+
+Verify file integrity
+Compare checksums on both servers to ensure the transfer was successful:
+
+bash
+# On jump host
+md5sum /tmp/nautilus.txt.gpg
+
+# On App Server 2
+ssh username@app-server-2 "md5sum /home/nfsdata/nautilus.txt.gpg"
+Both should return the same hash value.
+
+🔍 Final Verification Checklist
+bash
+# 1. Confirm file exists on jump host
+ls -l /tmp/nautilus.txt.gpg
+
+# 2. Confirm file exists on App Server 2
+ssh username@app-server-2 "ls -l /home/nfsdata/nautilus.txt.gpg"
+
+# 3. (Optional) Compare checksums for integrity
+md5sum /tmp/nautilus.txt.gpg
+ssh username@app-server-2 "md5sum /home/nfsdata/nautilus.txt.gpg"
+The task is complete once /home/nfsdata/nautilus.txt.gpg exists on App Server 2 with the correct content.
+
