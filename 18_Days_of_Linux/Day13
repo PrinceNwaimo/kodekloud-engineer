@@ -1,0 +1,126 @@
+In alignment with security compliance standards, the Nautilus project team has opted to impose restrictions on crontab access. 
+Specifically, only designated users will be permitted to create or update cron jobs.
+
+Configure crontab access on App Server 3 as follows: Allow crontab access to ravi user while denying access to the rod user.
+
+SOLUTION
+To configure crontab access on App Server 3, the key is to use the /etc/cron.allow file. The most secure and common approach is to create a whitelist file, as it takes precedence over any deny file and restricts access to only those explicitly listed.
+
+🛠️ Configuration Steps
+Verify current state: First, check if any access control files already exist. This helps you understand the current configuration.
+
+bash
+ls -l /etc/cron.allow /etc/cron.deny
+Create the whitelist: Create or edit the /etc/cron.allow file. This file should list users who are permitted to use crontab, one username per line. It is important to include root to maintain system administration access.
+
+bash
+sudo tee /etc/cron.allow <<'EOF'
+root
+rose
+EOF
+Set correct permissions: The access control files must be readable by the cron system. Set the ownership to root and permissions to 644 (readable by everyone, writable only by root).
+
+bash
+sudo chown root:root /etc/cron.allow
+sudo chmod 644 /etc/cron.allow
+🔍 How It Works
+The presence of /etc/cron.allow changes the access model for crontab:
+
+rose: Since rose is listed in the file, she will be allowed to create and edit cron jobs.
+
+ryan: Since ryan is not listed, he will be denied access. Even if a /etc/cron.deny file exists and does not mention ryan, the allow file's presence means only listed users are permitted.
+
+You can verify the configuration by attempting to use crontab as the ryan user. If successful, the system should return an error message similar to: You (ryan) are not allowed to use this program (crontab).
+
+⚠️ Important Notes
+Existing Jobs: These access controls only affect the ability to create or edit jobs. Any cron jobs that ryan may have created before this restriction will continue to run until they are removed manually.
+
+Root Access: The root user can always use crontab regardless of the settings in these files, but it is good practice to list it explicitly.
+
+How can I verify
+Here are several ways to verify the crontab access configuration on App Server 3:
+
+🔍 Verification Methods
+1. Check the file contents
+
+Confirm /etc/cron.allow exists and contains the correct entries:
+
+bash
+cat /etc/cron.allow
+Expected output:
+
+text
+root
+rose
+Also confirm /etc/cron.deny is either absent or empty (since cron.allow takes precedence):
+
+bash
+ls -l /etc/cron.deny
+cat /etc/cron.deny 2>/dev/null
+2. Check file permissions and ownership
+
+The file should be owned by root:root with 644 permissions:
+
+bash
+ls -l /etc/cron.allow
+Expected output:
+
+text
+-rw-r--r-- 1 root root ... /etc/cron.allow
+3. Test as the rose user (should succeed)
+
+Switch to rose and try listing or editing crontab:
+
+bash
+sudo su - rose
+crontab -l
+If rose has no jobs yet, you may see no crontab for rose — this is still a success (the command ran, access was granted).
+
+To fully confirm write access, try:
+
+bash
+echo "*/5 * * * * echo test" | crontab -
+crontab -l
+You should see the job listed. Clean up afterwards with crontab -r.
+
+4. Test as the ryan user (should fail)
+
+Switch to ryan and attempt crontab access:
+
+bash
+sudo su - ryan
+crontab -l
+Expected error:
+
+text
+You (ryan) are not allowed to use this program (crontab)
+See crontab(1) for more information
+Also test write access:
+
+bash
+crontab -e
+Should be blocked with the same error.
+
+5. Check system logs (optional)
+
+If you want additional evidence, check the system log for PAM/cron denials:
+
+bash
+sudo journalctl -t crond --since "5 minutes ago"
+# or
+sudo grep CRON /var/log/cron
+Denied attempts by ryan may be recorded here.
+
+✅ Summary Checklist
+Check	Expected Result
+/etc/cron.allow exists	Yes, contains root and rose
+/etc/cron.allow permissions	-rw-r--r-- root root
+rose runs crontab -l	Works (no permission error)
+ryan runs crontab -l	Error: "not allowed to use this program"
+⚠️ Note on su vs direct login
+If su - rose gives you a shell error due to a missing home directory or shell, you can test with:
+
+bash
+sudo -u rose crontab -l
+sudo -u ryan crontab -l
+This runs the command as the target user without fully switching the shell environment, which is often more reliable for quick verification.
