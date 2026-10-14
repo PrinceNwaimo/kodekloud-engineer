@@ -1,0 +1,28 @@
+With the installation of new tools on the app servers within the Stratos Datacenter, certain functionalities now necessitate graphical user interface (GUI) access.
+Adjust the default runlevel on all App servers in Stratos Datacenter to enable GUI booting by default. 
+It's imperative not to initiate a server reboot after completing this task.
+
+SOLUTION
+To configure the App servers to boot into the GUI by default without rebooting, you will use systemctl set-default. This command updates the system's default boot target configuration for the next boot, while leaving your current running session untouched.
+
+🖥️ Configuration Command
+Execute the following command on each App server in the Stratos Datacenter:
+
+bash
+sudo systemctl set-default graphical.target
+🔍 Verification
+After running the command, you can verify that the default target has been successfully changed:
+
+bash
+systemctl get-default
+You should see the following output, confirming that the system is now configured to boot into the GUI:
+
+text
+graphical.target
+📝 Important Notes
+No Reboot Required: Using set-default only modifies the symbolic link for the next boot. It does not switch the currently running system or require an immediate reboot .
+
+Live Session: To start the GUI in your current session (without changing the boot default), you would typically use sudo systemctl isolate graphical.target . However, since the task specifically requires changing the default boot configuration and forbids rebooting, set-default is the correct and sufficient command.
+
+App Server Credentials: If you need to log into the servers to run these commands, refer to your project documentation. For App Server 3 specifically, the user is typically banner .
+
