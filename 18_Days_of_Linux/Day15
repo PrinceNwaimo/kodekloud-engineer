@@ -1,0 +1,71 @@
+In the daily standup, it was noted that the timezone settings across the Nautilus Application Servers in the Stratos Datacenter are inconsistent with the local datacenter's timezone, currently set to Asia/Manila.
+
+Synchronize the timezone settings to match the local datacenter's timezone (Asia/Manila).
+
+SOLUTION
+To synchronize the timezone on the Nautilus Application Servers to match the datacenter's local timezone (Asia/Manila), you will use the timedatectl command. This change takes effect immediately without requiring a reboot.
+
+🛠️ Configuration Steps
+Execute the following commands on each App server:
+
+1. Set the timezone to Asia/Manila
+
+bash
+sudo timedatectl set-timezone Asia/Manila
+2. Verify the change
+
+bash
+timedatectl
+Expected output (key lines):
+
+text
+               Local time: <current time> PST
+           Universal time: <current time> UTC
+                 RTC time: <current time>
+                Time zone: Asia/Manila (PST, +0800)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+You can also verify with a quick date check:
+
+bash
+date
+The output should show the PST (Philippine Standard Time, UTC+8) suffix.
+
+🔄 Alternative Method (If timedatectl Is Unavailable)
+If for some reason timedatectl is not available, you can use the traditional method:
+
+bash
+sudo ln -sf /usr/share/zoneinfo/Asia/Manila /etc/localtime
+sudo hwclock --systohc
+The first command replaces the symlink so the system reads timezone data from the correct file.
+
+The second command writes the current system time to the hardware clock so the change persists across reboots.
+
+Verify with:
+
+bash
+date
+ls -l /etc/localtime
+The symlink should point to /usr/share/zoneinfo/Asia/Manila.
+
+📋 Verification Checklist
+Check	Command	Expected Result
+Timezone is set	timedatectl	Time zone: Asia/Manila (PST, +0800)
+Date reflects PST	date	Time with PST suffix
+Symlink correct (alt method)	ls -l /etc/localtime	Points to .../zoneinfo/Asia/Manila
+⚠️ Important Notes
+No Reboot Required: timedatectl set-timezone applies the change immediately to the running system.
+
+NTP Sync: If System clock synchronized: no, ensure systemd-timesyncd or chronyd is running so the clock stays accurate:
+
+bash
+sudo systemctl enable --now systemd-timesyncd
+# or
+sudo systemctl enable --now chronyd
+Repeat on All Servers: Apply these commands on every App server in the Stratos Datacenter to ensure consistency across the fleet (App Server 1, 2, 3, etc.).
+
+Application Impact: Some applications may cache timezone data. If an app reads the timezone only at startup, it may need a service restart to pick up the new setting:
+
+bash
+sudo systemctl restart <service-name>
