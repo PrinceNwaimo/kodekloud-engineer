@@ -1,0 +1,46 @@
+Following a security audit, the xFusionCorp Industries security team has opted to enhance application and server security with SELinux. 
+To initiate testing, the following requirements have been established for App server 1 in the Stratos Datacenter:
+
+Install the required SELinux packages.
+
+Permanently disable SELinux for the time being; it will be re-enabled after necessary configuration changes.
+
+No need to reboot the server, as a scheduled maintenance reboot is already planned for tonight.
+
+Disregard the current status of SELinux via the command line; the final status after the reboot should be disabled.
+
+SOLUTION
+To meet the requirement of permanently disabling SELinux on App Server 1 without rebooting immediately, you need to install the relevant packages and modify the configuration file. The core operation is to edit /etc/selinux/config and change the SELinux status to disabled.
+
+🛠️ Operation Steps
+Log in to App Server 1 and switch to the root user.
+
+Install SELinux-related packages (for RHEL/CentOS systems):
+
+bash
+yum install -y selinux-policy selinux-policy-targeted policycoreutils
+This ensures the required policy and tool packages are present on the system, facilitating future re-enabling .
+
+Edit the configuration file to disable permanently:
+
+bash
+vi /etc/selinux/config
+Find the line SELINUX=enforcing and change it to:
+
+text
+SELINUX=disabled
+Save and exit .
+
+Verify the configuration:
+
+bash
+grep ^SELINUX= /etc/selinux/config
+The expected output should be SELINUX=disabled .
+
+💡 Key Reminders
+No need to reboot: As per the requirement, do not reboot the server now. This configuration will only take effect after the scheduled reboot tonight, and getenforce may still display Enforcing currently, which is normal .
+
+Final status: After the reboot, the system will not load the SELinux policy, and the final status will be disabled .
+
+To help you verify the results after the reboot
+After tonight's scheduled reboot, you can run getenforce to confirm whether the output is Disabled. If you need further confirmation or encounter any issues, feel free to let me know.
