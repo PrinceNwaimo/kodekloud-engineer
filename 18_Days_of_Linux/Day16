@@ -1,0 +1,46 @@
+The Nautilus system administrators team has rolled out a web UI application for their backup utility on the Nautilus application server 2 within the Stratos Datacenter. 
+This application runs on port 8084and appropriate firewall rules must be configured to allow incoming traffic. 
+To achieve this, firewalld needs to be installed and configured on the application server. 
+To ensure proper functionality, the following requirements have been identified:
+
+Install and enable the firewalld service.
+Allow all incoming connections on port 8084/tcp.
+Ensure the zone is set to public.
+
+SOLUTION
+To configure the firewall on Nautilus App Server 2, run the following commands on the server.
+
+🛠️ Configuration Steps
+Install firewalld
+
+bash
+sudo yum install firewalld -y
+Start and enable the firewalld service
+
+bash
+sudo systemctl enable --now firewalld
+Set the default zone to public
+
+bash
+sudo firewall-cmd --set-default-zone=public
+Allow incoming connections on port 8084/tcp
+
+bash
+sudo firewall-cmd --permanent --zone=public --add-port=8084/tcp
+Reload firewalld to apply the changes
+
+bash
+sudo firewall-cmd --reload
+🔍 Verification
+After completing the steps, you can verify the configuration with these commands:
+
+bash
+# Check the default zone
+sudo firewall-cmd --get-default-zone
+
+# Check that the port is open in the public zone
+sudo firewall-cmd --zone=public --query-port=8084/tcp
+
+# List all rules for the public zone
+sudo firewall-cmd --zone=public --list-all
+The last command should show 8084/tcp in the ports: line.
