@@ -1,0 +1,451 @@
+As part of the temporary resource allocation, Jim has been appointed to the Nautilus project as a backup developer. 
+To facilitate this, a temporary user account is required for Jim. 
+It is advisable to create a user account with a specified expiration date to ensure restricted server access beyond the designated period.
+A user profile under the name jim has already been established on App Server 3 within the Stratos Datacenter. 
+Adjust the account's expiration date to 2026-12-07. 
+Additionally, locate all files (excluding directories) owned by this user within the /home/usersdata directory and copy them to the /official directory while maintaining their original ownership.
+
+SOLUTION
+To complete this task, you need to use the chage command to modify the account expiration date, and combine the find and cp commands to copy files while preserving ownership.
+
+1. Modify Jim's Account Expiration Date
+Use the chage command's -E parameter to set the account expiration date:
+
+bash
+sudo chage -E 2026-12-07 jim
+After execution, you can verify the setting with the following command:
+
+bash
+sudo chage -l jim
+Check whether the "Account expires" line displays as Dec 07, 2026.
+
+2. Copy Files While Preserving Ownership
+First, use find to locate all regular files (excluding directories) under /home/usersdata owned by the jim user:
+
+bash
+find /home/usersdata -type f -user jim
+Then, use cp with the -p parameter to copy them to the /official directory. -p preserves the file's ownership, permissions, and timestamps:
+
+bash
+sudo cp -p $(find /home/usersdata -type f -user jim) /official/
+Note: If there are a large number of files, or if file paths contain spaces, it is recommended to use -exec or xargs with cp:
+
+bash
+sudo find /home/usersdata -type f -user jim -exec cp -p {} /official/ \;
+3. Verification
+After completing the copy, verify the ownership of the files in the /official directory:
+
+bash
+ls -l /official/
+Confirm that the file owner still shows as jim.
+
+There is a cron job that needs to be added to the Nautilus storage server in Stratos DC.The cron details is as below:
+
+
+
+a. Install cronie package and start crond service.
+
+
+b. Add this command to the crontab of root user:
+
+/usr/bin/touch test_passed
+
+
+
+Make it run every day at 21:30 (use 30 21 format in the expression).
+Found 16 web pages
+On the Nautilus storage server, install cronie and start the crond service, then add the scheduled task to the root user's crontab.
+
+Installation and Service Startup
+bash
+sudo yum install -y cronie
+sudo systemctl start crond
+sudo systemctl enable crond
+Verify that the service is running:
+
+bash
+sudo systemctl status crond
+Adding the Cron Job
+Switch to the root user and edit the crontab:
+
+bash
+sudo su -
+crontab -e
+Add the following line to the file:
+
+text
+30 21 * * * /usr/bin/touch test_passed
+Save and exit. The cron expression 30 21 * * * means the task executes at 21:30 every day.
+
+Verification
+Confirm the task has been written:
+
+bash
+crontab -l
+The output should include the line 30 21 * * * /usr/bin/touch test_passed.
+
+Configure the firewalld rules on the Nautilus application server 3 to allow incoming traffic on port 6100, ensuring the proper functionality of the system in accordance with the security requirements.
+
+
+Install and enable the firewalld service.
+Allow incoming connections on port 6100/tcp.
+Ensure the zone is set to public.
+Found 20 web pages
+To configure firewalld on Nautilus Application Server 3, install and enable the service, allow TCP port 6100, and ensure the public zone is active.
+
+🔧 Configuration Steps
+Install firewalld (if not already present):
+
+bash
+sudo yum install -y firewalld
+Start and enable the firewalld service:
+
+bash
+sudo systemctl start firewalld
+sudo systemctl enable firewalld
+Set the default zone to public:
+
+bash
+sudo firewall-cmd --set-default-zone=public
+Allow incoming TCP traffic on port 6100:
+
+bash
+sudo firewall-cmd --zone=public --add-port=6100/tcp --permanent
+Reload firewalld to apply the permanent rule:
+
+bash
+sudo firewall-cmd --reload
+✅ Verification
+Confirm the port is open and the zone is correct:
+
+bash
+sudo firewall-cmd --zone=public --list-ports
+sudo firewall-cmd --get-default-zone
+The first command should show 6100/tcp, and the second should return public.
+
+There are some specific requirements related to the permissions of some new directories/files. Create these directories/files and set appropriate permissions as mentioned below:
+
+
+a. Create a directory named /usr/kke_data on App server 3 in Stratos Datacenter.
+
+b. Further, create a file named /usr/kke_data/kke_data.txt and add This is a test file! line in this file.
+
+c. The user owner of the /usr/kke_data directory and its contents should be root.
+
+d. The /usr/kke_data/kke_data.txt file permissions should be 600.
+Let's go through the steps one by one on App Server 3 in the Stratos Datacenter.
+
+📁 Step 1: Create the directory
+bash
+sudo mkdir -p /usr/kke_data
+📝 Step 2: Create the file and add the line
+bash
+sudo sh -c 'echo "This is a test file!" > /usr/kke_data/kke_data.txt'
+Or using tee:
+
+bash
+echo "This is a test file!" | sudo tee /usr/kke_data/kke_data.txt
+👤 Step 3: Set the user owner to root for the directory and its contents
+bash
+sudo chown -R root /usr/kke_data
+This sets root as the owner of /usr/kke_data and everything inside it.
+
+🔒 Step 4: Set the file permissions to 600
+bash
+sudo chmod 600 /usr/kke_data/kke_data.txt
+✅ Verification
+Check the results:
+
+bash
+ls -ld /usr/kke_data
+ls -l /usr/kke_data/kke_data.txt
+cat /usr/kke_data/kke_data.txt
+Expected output:
+
+The directory listing should show root as the owner.
+
+The file should show -rw------- (600) with root as the owner.
+
+The file content should be This is a test file!
+
+[banner@stapp03 ~]$ ls -ld /usr/kke_data
+ls -l /usr/kke_data/kke_data.txt
+cat /usr/kke_data/kke_data.txt
+drwxr-xr-x 2 root root 4096 Oct 17 19:30 /usr/kke_data
+-rw------- 1 root root 21 Oct 17 19:30 /usr/kke_data/kke_data.txt
+cat: /usr/kke_data/kke_data.txt: Permission denied
+The verification output actually confirms everything is configured correctly — the Permission denied on cat is expected behavior, not a problem.
+
+✅ What the output confirms
+Directory: drwxr-xr-x 2 root root — owner is root ✔️
+
+File: -rw------- 1 root root — owner is root, permissions are 600 ✔️
+
+File size: 21 bytes, which matches This is a test file! (20 chars + newline) ✔️
+
+🔍 Why cat failed
+The file has permissions 600 (-rw-------), meaning only the owner (root) can read it. You ran the command as banner, a non-root user, so access was correctly denied.
+
+To read the file, use sudo:
+
+bash
+sudo cat /usr/kke_data/kke_data.txt
+Expected output:
+
+text
+This is a test file!
+💡 Summary
+All four requirements are met:
+
+Requirement	Status
+a. Directory /usr/kke_data created	✔️
+b. File kke_data.txt created with content	✔️
+c. Owner of directory and contents is root	✔️
+d. File permissions are 600	✔️
+No further changes are needed. The Permission denied simply demonstrates that the 600 restriction is working as intended.
+
+The application development team needs some directories created on one of the app servers in Stratos Datacenter. They will use these directories to store some data. They have shared below requirements with us:
+
+
+
+Create some directories as below under /opt directory on App server 3 in Stratos Datacenter.
+
+/opt/app/backup/latest
+To create the required directory structure on App Server 3, use the mkdir command with the -p flag, which creates parent directories as needed.
+
+📁 Create the directory
+bash
+sudo mkdir -p /opt/app/backup/latest
+The -p option ensures that any missing parent directories (/opt/app and /opt/app/backup) are created automatically, and it won't error out if the directory already exists.
+
+✅ Verification
+Check that the full path exists:
+
+bash
+ls -ld /opt/app /opt/app/backup /opt/app/backup/latest
+Expected output shows all three directories with their permissions and ownership, for example:
+
+text
+drwxr-xr-x 3 root root 4096 Oct 17 19:40 /opt/app
+drwxr-xr-x 2 root root 4096 Oct 17 19:40 /opt/app/backup
+drwxr-xr-x 2 root root 4096 Oct 17 19:40 /opt/app/backup/latest
+You can also confirm the tree structure with:
+
+bash
+tree /opt/app
+The directory /opt/app/backup/latest is now ready for the application development team to store their data.
+
+The development team requires specific logs stored within the Nautilus storage server situated in the Stratos DC. Access the designated location on the server to retrieve the necessary logs. Further, perform below actions:
+
+
+Create a tar archive named logs.tar (under natasha's home) of /var/log/ directory.
+Now, create a compressed tar archive as well named logs.tar.gz (under natasha's home) of /var/log/ directory.
+To complete this task on the Nautilus storage server, you need to create two archives in natasha's home directory from /var/log. Since /var/log contains files owned by root and some subdirectories may not be readable, run the commands with sudo.
+
+📦 Step 1: Create the uncompressed tar archive
+bash
+sudo tar -cvf /home/natasha/logs.tar /var/log/
+-c creates a new archive
+
+-v shows progress (optional but helpful)
+
+-f specifies the archive filename
+
+🗜️ Step 2: Create the compressed tar archive
+bash
+sudo tar -czvf /home/natasha/logs.tar.gz /var/log/
+-z compresses with gzip
+
+The rest of the flags are the same as above
+
+🔑 Step 3: Ensure natasha owns the archives
+Since the archives were created with sudo, they will be owned by root. Fix ownership so natasha can access them:
+
+bash
+sudo chown natasha:natasha /home/natasha/logs.tar /home/natasha/logs.tar.gz
+✅ Verification
+List the files and check their sizes:
+
+bash
+ls -lh /home/natasha/logs.tar /home/natasha/logs.tar.gz
+Expected output shows both archives owned by natasha, with logs.tar.gz noticeably smaller than logs.tar due to compression. You can also inspect the archive contents without extracting:
+
+bash
+tar -tf /home/natasha/logs.tar | head
+tar -tzf /home/natasha/logs.tar.gz | head
+💡 Notes
+Both archives are placed directly under /home/natasha/ (natasha's home), as required.
+
+If you prefer to create the archives as natasha without sudo, natasha would need read access to all of /var/log, which is typically not the case — so using sudo plus chown is the reliable approach.
+
+There is some data on Nautilus App Server 3 in Stratos DC. Data needs to be altered in some of the files. On Nautilus App Server 3, alter the /home/BSD.txt file as per details given below.
+
+
+
+a. Delete all lines containing the word copyright and save the results in /home/BSD_DELETE.txt file. (Please be aware of case sensitivity)
+
+b. Replace all occurrences of the word or (look for the exact match) with is and save the results in /home/BSD_REPLACE.txt file.
+
+Note: Let's say you are asked to replace the word to with from. In that case, make sure not to alter any words containing the string itself, for example; upto, contributor etc.
+To alter the /home/BSD.txt file as required on Nautilus App Server 3, use grep and sed. The case-sensitivity and exact-word-match requirements are the key details here.
+
+a. Delete all lines containing the word "copyright" (case-sensitive)
+bash
+grep -v 'copyright' /home/BSD.txt > /home/BSD_DELETE.txt
+-v inverts the match, so only lines without the word copyright are kept.
+
+No -i flag is used, so matching is case-sensitive — lines containing Copyright or COPYRIGHT will not be deleted, as per the requirement.
+
+Verification:
+
+bash
+grep -c 'copyright' /home/BSD_DELETE.txt   # should return 0
+b. Replace the exact word "or" with "is"
+bash
+sed 's/\bor\b/is/g' /home/BSD.txt > /home/BSD_REPLACE.txt
+\b is a word boundary, ensuring only the standalone word or is matched.
+
+g applies the replacement to all occurrences on each line.
+
+This prevents altering words like upto, contributor, order, etc., because those don't have word boundaries around or.
+
+Verification:
+
+bash
+grep -o '\bor\b' /home/BSD_REPLACE.txt | wc -l   # should return 0
+To confirm that words containing "or" were left untouched:
+
+bash
+grep -o '\b[a-zA-Z]*or[a-zA-Z]*\b' /home/BSD_REPLACE.txt | sort -u | head
+You should still see words like order, contributor, upto unchanged, while standalone or has become is.
+
+⚠️ Notes
+If sed on your system doesn't support \b (GNU sed does), use \< and \> instead:
+
+bash
+sed 's/\<or\>/is/g' /home/BSD.txt > /home/BSD_REPLACE.txt
+Both output files are written directly under /home/, as specified, without modifying the original /home/BSD.txt.
+
+If you don't have write permission to /home/, prefix the commands with sudo or run them as a user with appropriate access.
+During the security audit last week, the security team found some issues on one of the app servers in Stratos DC. They shared a report and asked to apply some resource limits for some users.
+
+
+
+Configure a resource limit (hard limit) for the developers group so that this group cannot exceed 5 logins (maxlogins) on App server 3 in Stratos Datacenter.
+To enforce a hard limit on simultaneous logins for the developers group on App Server 3, you need to edit the PAM limits configuration file.
+
+⚙️ Configuration Steps
+Log in to App Server 3 and switch to the root user.
+
+Edit the limits configuration file:
+
+bash
+sudo vi /etc/security/limits.conf
+Add the following line at the end of the file:
+
+text
+@developers hard maxlogins 5
+@developers: The @ symbol specifies that the domain is a group .
+
+hard: Enforces the absolute maximum limit .
+
+maxlogins: The item that controls the maximum number of simultaneous logins .
+
+5: The maximum number of concurrent sessions allowed for the group.
+
+Save and exit the file.
+
+✅ Verification
+The new limit will be enforced the next time a member of the developers group initiates a new login session. You can verify the configuration is present:
+
+bash
+grep developers /etc/security/limits.conf
+Note: Group limits set in this file do not apply to the root user . If you need to test the limit, you must log in as a non-root user who is a member of the developers group.
+xFusionCorp Industries is planning to host two static websites on their infra in Stratos Datacenter. 
+The development of these websites is still in-progress, but we want to install some prerequisites to get the servers ready. Please perform the following steps to accomplish the task:
+
+Install httpd package and dependencies on app server 3 and start its service.
+To install and start the httpd web server on App Server 3, follow these steps.
+
+📦 Step 1: Install httpd
+bash
+sudo yum install -y httpd
+This installs the Apache HTTP Server (httpd) along with its dependencies.
+
+▶️ Step 2: Start the httpd service
+bash
+sudo systemctl start httpd
+🔁 Step 3: Enable the service at boot (recommended)
+Since two websites will be hosted and the server will be rebooted during maintenance, enabling the service ensures it starts automatically:
+
+bash
+sudo systemctl enable httpd
+✅ Step 4: Verify the service is running
+bash
+sudo systemctl status httpd
+Expected output includes Active: active (running).
+
+You can also verify the package is installed and the server responds:
+
+bash
+rpm -q httpd
+curl -I http://localhost
+rpm -q httpd should print the installed version, e.g. httpd-2.x.x-....
+
+The curl command should return HTTP/1.1 200 OK (or a similar success response) from the default Apache page.
+
+💡 Notes
+If firewalld is running on the server, you may need to allow HTTP traffic for the websites to be reachable externally:
+
+bash
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+The default document root is /var/www/html, which is where the static website content can later be placed. The web server is now ready for the next steps of hosting the two static sites.
+
+During recent servers audit, its was observed that some cleanup is needed on all app servers in Stratos Datacenter. Find below more details:
+
+
+
+Remove logrotate package from all app servers in Stratos Datacenter.
+To remove the logrotate package from all app servers in the Stratos Datacenter, you need to run the removal command on each app server individually.
+
+🖥️ App Servers in Stratos DC
+The app servers are typically:
+
+stapp01 (App Server 1)
+
+stapp02 (App Server 2)
+
+stapp03 (App Server 3)
+
+🗑️ Removal Command
+On each app server, run:
+
+bash
+sudo yum remove -y logrotate
+remove uninstalls the package (and anything dependent on it, if applicable).
+
+-y automatically answers "yes" to the confirmation prompt.
+
+✅ Verification
+On each server, confirm the package is gone:
+
+bash
+rpm -q logrotate
+Expected output:
+
+text
+package logrotate is not installed
+💡 Notes
+Be aware: logrotate is a dependency of some system packages. yum remove will list any packages that depend on it and ask to remove them too. Review that list before confirming — on standard RHEL/CentOS systems this is usually safe, but double-check nothing critical is being pulled out.
+
+If you have SSH access and centralized management, you can loop over all servers from a jump host:
+
+bash
+for host in stapp01 stapp02 stapp03; do
+    ssh $host "sudo yum remove -y logrotate"
+done
+(Adjust usernames/hostnames to match your environment.)
+
+After removal, log rotation will no longer be handled automatically. Since this is an audit-driven cleanup, ensure the relevant teams are aware, and consider an alternative log rotation mechanism if logs still need managing.
+
