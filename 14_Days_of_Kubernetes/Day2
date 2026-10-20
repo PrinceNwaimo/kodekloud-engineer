@@ -1,0 +1,100 @@
+The Nautilus DevOps team is delving into Kubernetes for app management. 
+One team member needs to create a deployment following these details:
+
+Create a deployment named nginx to deploy the application nginx using the image nginx:latest (ensure to specify the tag)
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Create the nginx Deployment
+Here's the YAML manifest and the steps to create the deployment as specified.
+
+Deployment YAML Manifest
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+Steps to Create the Deployment
+Option 1: Apply using a YAML file (recommended)
+Create the manifest file:
+
+bash
+cat <<EOF > nginx-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+EOF
+Apply it:
+
+bash
+kubectl apply -f nginx-deployment.yaml
+Option 2: Imperative command
+bash
+kubectl create deployment nginx --image=nginx:latest
+Note: The imperative command works fine and defaults to 1 replica. Just make sure the image tag is explicitly nginx:latest (don't omit the tag), since omitting it would default to latest implicitly — but the task requires it to be explicitly specified.
+
+Verification
+Confirm the deployment was created correctly:
+
+bash
+# Check deployment status
+kubectl get deployment nginx
+
+# Check the rollout status
+kubectl rollout status deployment/nginx
+
+# Verify image tag
+kubectl get deployment nginx -o jsonpath='{.spec.template.spec.containers[*].image}{"\n"}'
+
+# Check that pods are running (managed by the deployment)
+kubectl get pods -l app=nginx
+
+# Get detailed info
+kubectl describe deployment nginx
+Expected output for the image check:
+
+text
+nginx:latest
+Expected deployment status:
+
+text
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+nginx   1/1     1            1           XXs
+Summary of Requirements Met
+Requirement	Value
+Deployment name	nginx
+Application	nginx
+Image	nginx:latest (tag explicitly specified)
+The deployment is now created and manages a pod running nginx:latest. You can scale it later with kubectl scale deployment nginx --replicas=<n> if needed.
