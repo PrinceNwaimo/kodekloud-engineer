@@ -1,0 +1,103 @@
+The Nautilus DevOps team is diving into Kubernetes for application management. 
+One team member has a task to create a pod according to the details below:
+
+Create a pod named pod-nginx using the nginx image with the latest tag. Ensure to specify the tag as nginx:latest.
+
+Set the app label to nginx_app, and name the container as nginx-container.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Pod YAML Manifest
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-nginx
+  labels:
+    app: nginx_app
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx:latest
+Steps to Create the Pod
+Option 1: Create using a YAML file
+Create the YAML file:
+
+bash
+cat <<EOF > pod-nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-nginx
+  labels:
+    app: nginx_app
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx:latest
+EOF
+Apply the manifest:
+
+bash
+kubectl apply -f pod-nginx.yaml
+Option 2: Create using imperative command
+bash
+kubectl run pod-nginx --image=nginx:latest --labels="app=nginx_app" --dry-run=client -o yaml | \
+  sed 's/name: pod-nginx/name: pod-nginx\n  labels:\n    app: nginx_app/' > /dev/null
+The cleaner imperative approach is to generate the manifest and modify it:
+
+bash
+kubectl run pod-nginx --image=nginx:latest --labels="app=nginx_app" --dry-run=client -o yaml > pod-nginx.yaml
+Then edit the file to change the container name from pod-nginx to nginx-container:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: nginx_app
+  name: pod-nginx
+spec:
+  containers:
+  - image: nginx:latest
+    name: nginx-container
+Then apply:
+
+bash
+kubectl apply -f pod-nginx.yaml
+Verification
+After creating the pod, verify it's running correctly:
+
+bash
+# Check pod status
+kubectl get pod pod-nginx
+
+# Get detailed information
+kubectl describe pod pod-nginx
+
+# Verify labels
+kubectl get pod pod-nginx --show-labels
+
+# Verify the container name and image
+kubectl get pod pod-nginx -o jsonpath='{.spec.containers[*].name}{"\n"}{.spec.containers[*].image}{"\n"}'
+Expected output should show:
+
+Pod name: pod-nginx
+
+Label: app=nginx_app
+
+Container name: nginx-container
+
+Image: nginx:latest
+
+Status: Running
+
+Summary of Requirements Met
+Requirement	Value
+Pod name	pod-nginx
+Image	nginx:latest
+Label	app=nginx_app
+Container name	nginx-container
+The pod is now created with all the specified requirements.
+
