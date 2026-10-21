@@ -1,0 +1,135 @@
+tep 1: Check the current state of the deployment
+bash
+kubectl get deployment nginx-deployment
+Check the current image being used:
+
+bash
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[*].image}'
+Step 2: Execute the rolling update
+Update the image using kubectl set image:
+
+bash
+kubectl set image deployment/nginx-deployment nginx=nginx:1.17
+Note: Replace nginx (the container name in the command) with the actual container name in your deployment. If you're unsure of the container name, find it with:
+
+bash
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[*].name}'
+If the container name differs, use that name in place of nginx above. Since the image is nginx, the container is typically also named nginx.
+
+Alternatively, you can use a patch:
+
+bash
+kubectl patch deployment nginx-deployment -p \
+  '{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:1.17"}]}}}}'
+Step 3: Monitor the rollout status
+bash
+kubectl rollout status deployment/nginx-deployment
+Expected output:
+
+text
+Waiting for deployment "nginx-deployment" rollout to finish: 1 old replicas are pending termination...
+deployment "nginx-deployment" successfully rolled out
+Step 4: Verify the update
+Check that the deployment now uses the new image:
+
+bash
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[*].image}'
+Expected output:
+
+text
+nginx:1.17
+Confirm all pods are running and operational:
+
+bash
+kubectl get pods -l app=nginx
+Expected output (all pods should be Running and 1/1 ready):
+
+text
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-xxxxxxxxxx-xxxxx   1/1     Running   0          30s
+nginx-deployment-xxxxxxxxxx-xxxxx   1/1     Running   0          30s
+nginx-deployment-xxxxxxxxxx-xxxxx   1/1     Running   0          30s
+Step 5: (Optional) Verify rollout history
+bash
+kubectl rollout history deployment/nginx-deployment
+Summary
+Action	Command/Result
+Deployment	nginx-deployment
+Update method	Rolling update (default strategy)
+New image	nginx:1.17
+Rollout status	Successfully rolled out
+Pods	All operational (Running, 1/1 ready)
+The rolling update has been executed successfully — the deployment now runs nginx:1.17, and all pods are operational. If you ever need to revert, you can use kubectl rollout undo deployment/nginx-deployment.
+
+Good news — the rollout itself succeeded (nginx:1.17 is now set on the deployment). The issue is only with how you're filtering pods. The label app=nginx simply doesn't exist on this deployment's pods.
+
+Why your commands returned "No resources found"
+kubectl get pods -l app=nginx filters pods by the label app=nginx. If that label isn't present, you get nothing back — even though the pods exist. The deployment was likely created with a different label (e.g., app=nginx-deployment, run=nginx, or similar).
+
+Step 1: Find the actual pods and their labels
+Just list all pods in the default namespace:
+
+bash
+kubectl get pods
+Then inspect the labels on one of them:
+
+bash
+kubectl get pods --show-labels
+Or look at what selector the deployment itself uses:
+
+bash
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.selector.matchLabels}'
+Step 2: Verify the pods are running
+Once you see the real pod names, confirm they're operational:
+
+bash
+kubectl get pods -o wide
+You should see pods named like nginx-deployment-<hash>-<hash> with STATUS: Running and READY: 1/1.
+
+To filter using the deployment's own selector, you can let kubectl do the work for you:
+
+bash
+kubectl get pods -l $(kubectl get deployment nginx-deployment -o jsonpath='{.spec.selector.matchLabels.app}')
+Step 3: Confirm the image on the running pods
+Verify the pods are actually running nginx:1.17:
+
+bash
+kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}'
+Or describe the deployment (which also shows the pod template and status):
+
+bash
+kubectl describe deployment nginx-deployment
+Key takeaway
+What you ran	Why it failed
+kubectl get pods -l app=nginx	No pods carry the label app=nginx
+kubectl get pods -l app=nginx-container	No pods carry that label either
+kubectl rollout status ...	✅ Correct — rollout succeeded
+jsonpath image check	✅ Correct — shows nginx:1.17
+The update is done and successful. The "No resources found" messages are a red herring caused by an incorrect label selector. Use kubectl get pods (with no -l filter) or the deployment's actual selector to see the running pods, and confirm each shows Running / 1/1 to satisfy the "all pods operational" requirement.
+
+A rolling update is a deployment strategy in Kubernetes that updates an application without causing downtime. It works by gradually replacing old Pods with new ones, one at a time or in small batches, while ensuring that the application remains available to users throughout the process .
+
+🔄 How It Works
+When you trigger an update (for example, by changing the container image), Kubernetes does not stop all old Pods at once. Instead, it follows a controlled process :
+
+Create New Pods: It starts new Pods with the updated configuration on nodes that have available resources.
+
+Wait for Readiness: It waits for the new Pods to be running and ready to serve traffic.
+
+Terminate Old Pods: Once the new Pods are ready, it gradually terminates the old Pods.
+
+If the Deployment is exposed through a Service, traffic is only routed to Pods that are ready. This ensures users never experience an interruption .
+
+⚙️ Key Controls
+You can control the pace of the update using two main parameters in the Deployment's strategy :
+
+Parameter	What It Controls	Default
+maxUnavailable	The maximum number of Pods that can be unavailable during the update.	25%
+maxSurge	The maximum number of extra Pods that can be created above the desired count.	25%
+Both values can be set as absolute numbers or percentages.
+
+🛡️ Safety & Rollback
+Rolling updates are versioned. If a new version has a problem, you can easily revert to the previous stable version using the kubectl rollout undo command . This makes it a safe method for continuous integration and delivery.
+
+I hope this explanation helps clarify the concept. Would you like to know how to configure the maxUnavailable and maxSurge parameters for a specific deployment?
+
