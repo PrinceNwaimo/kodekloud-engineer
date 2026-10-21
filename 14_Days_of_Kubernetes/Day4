@@ -1,0 +1,86 @@
+The Nautilus DevOps team has noticed performance issues in some Kubernetes-hosted applications due to resource constraints. 
+To address this, they plan to set limits on resource utilization. Here are the details:
+
+Create a pod named httpd-pod with a container named httpd-container. Use the httpd image with the latest tag (specify as httpd:latest). Configure the following container-level resource requests and limits for the container:
+
+Requests: Memory: 15Mi, CPU: 100m
+
+Limits: Memory: 20Mi, CPU: 100m
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Pod Manifest
+Create a file named httpd-pod.yaml:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: httpd-pod
+spec:
+  containers:
+  - name: httpd-container
+    image: httpd:latest
+    resources:
+      requests:
+        memory: "15Mi"
+        cpu: "100m"
+      limits:
+        memory: "20Mi"
+        cpu: "100m"
+Apply the Manifest
+bash
+kubectl apply -f httpd-pod.yaml
+Verify the Pod
+Check that the pod is running:
+
+bash
+kubectl get pods
+Expected output:
+
+text
+NAME        READY   STATUS    RESTARTS   AGE
+httpd-pod   1/1     Running   0          15s
+Confirm the resource requests and limits are set correctly:
+
+bash
+kubectl describe pod httpd-pod
+Look for the Limits and Requests sections under the container:
+
+text
+Containers:
+  httpd-container:
+    ...
+    Limits:
+      cpu:     100m
+      memory:  20Mi
+    Requests:
+      cpu:     100m
+      memory:  15Mi
+Alternatively, use a JSONPath query:
+
+bash
+kubectl get pod httpd-pod -o jsonpath='{.spec.containers[0].resources}' | jq
+Expected output:
+
+json
+{
+  "limits": {
+    "cpu": "100m",
+    "memory": "20Mi"
+  },
+  "requests": {
+    "cpu": "100m",
+    "memory": "15Mi"
+  }
+}
+Summary
+Field	Value
+Pod name	httpd-pod
+Container name	httpd-container
+Image	httpd:latest
+Requests	Memory: 15Mi, CPU: 100m
+Limits	Memory: 20Mi, CPU: 100m
+The pod is now running with the correct container-level resource requests and limits as requested by the DevOps team.
+
