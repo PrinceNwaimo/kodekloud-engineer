@@ -1,0 +1,69 @@
+The Nautilus DevOps team is planning to deploy some micro services on Kubernetes platform. 
+The team has already set up a Kubernetes cluster and now they want to set up some namespaces, deployments etc. 
+Based on the current requirements, the team has shared some details as below:
+
+Create a namespace named dev and deploy a POD within it. Name the pod dev-nginx-pod and use the nginx image with the latest tag. Ensure to specify the tag as nginx:latest.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Step 1: Create the namespace
+bash
+kubectl create namespace dev
+Or using a YAML manifest:
+
+yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+Apply it:
+
+bash
+kubectl apply -f namespace.yaml
+Step 2: Create the pod with nginx:latest image
+Using kubectl run (imperative):
+
+bash
+kubectl run dev-nginx-pod --image=nginx:latest --namespace=dev
+Or declaratively with a manifest:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dev-nginx-pod
+  namespace: dev
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+Apply it:
+
+bash
+kubectl apply -f pod.yaml
+Step 3: Verify
+Check the namespace:
+
+bash
+kubectl get namespaces
+Check the pod (it should be Running):
+
+bash
+kubectl get pods -n dev
+Expected output:
+
+text
+NAME            READY   STATUS    RESTARTS   AGE
+dev-nginx-pod   1/1     Running   0          10s
+You can also confirm the image tag:
+
+bash
+kubectl describe pod dev-nginx-pod -n dev | grep -i image
+This should show nginx:latest.
+
+Summary
+Resource	Name	Details
+Namespace	dev	—
+Pod	dev-nginx-pod	Image: nginx:latest, in namespace dev
+The pod is now running in the dev namespace using the latest nginx image, satisfying the team's requirements.
