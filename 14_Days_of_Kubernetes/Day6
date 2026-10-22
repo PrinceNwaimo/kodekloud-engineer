@@ -1,0 +1,49 @@
+Earlier today, the Nautilus DevOps team deployed a new release for an application. 
+However, a customer has reported a bug related to this recent release. 
+Consequently, the team aims to revert to the previous version.
+
+There exists a deployment named nginx-deployment; initiate a rollback to the previous revision.
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Step 1: Check rollout history
+bash
+kubectl rollout history deployment/nginx-deployment
+This will show you the revisions. You should see something like:
+
+text
+deployment.apps/nginx-deployment 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+Step 2: Perform the rollback
+To roll back to the immediately previous revision:
+
+bash
+kubectl rollout undo deployment/nginx-deployment
+Step 3: Verify the rollback
+Check the status of the rollback:
+
+bash
+kubectl rollout status deployment/nginx-deployment
+And confirm the new revision number (the revision you rolled back to becomes the newest revision):
+
+bash
+kubectl rollout history deployment/nginx-deployment
+You can also verify the running image/pods:
+
+bash
+kubectl get deployment nginx-deployment -o wide
+kubectl get pods -l app=nginx
+Optional: Roll back to a specific revision
+If you want to target a specific revision (for example, revision 1) rather than just "the previous one":
+
+bash
+kubectl rollout undo deployment/nginx-deployment --to-revision=1
+Note on behavior: kubectl rollout undo without --to-revision reverts to the previous revision. After the undo, the revision you rolled back to is renumbered as the newest revision (e.g., if you were on revision 2, after undo the deployment shows revision 3, which contains the revision-1 spec). The old revision-2 spec is retained in history so you can roll forward again if needed.
+
+If you paste the output of kubectl rollout history deployment/nginx-deployment here, I can tell you exactly which revision corresponds to the "previous version" and confirm the correct command.
+
+
+
+
