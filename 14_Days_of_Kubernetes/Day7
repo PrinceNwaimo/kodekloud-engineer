@@ -1,0 +1,75 @@
+The Nautilus DevOps team is gearing up to deploy applications on a Kubernetes cluster for migration purposes. 
+A team member has been tasked with creating a ReplicaSet outlined below:
+
+Create a ReplicaSet using nginx image with latest tag (ensure to specify as nginx:latest) and name it nginx-replicaset.
+
+Apply labels: app as nginx_app, type as front-end.
+
+Name the container nginx-container. Ensure the replica count is 4.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Creating the ReplicaSet
+Here's the manifest that meets all the requirements, followed by the command to apply it.
+
+Step 1: Create the manifest file
+bash
+cat <<EOF > nginx-replicaset.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-replicaset
+  labels:
+    app: nginx_app
+    type: front-end
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: nginx_app
+      type: front-end
+  template:
+    metadata:
+      labels:
+        app: nginx_app
+        type: front-end
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx:latest
+EOF
+Key points on the manifest:
+
+name: nginx-replicaset — matches the required ReplicaSet name.
+
+replicas: 4 — sets the replica count to 4.
+
+selector.matchLabels must match the pod template labels, otherwise the API server rejects it.
+
+Labels app: nginx_app and type: front-end are applied to both the ReplicaSet and the pods.
+
+Container is named nginx-container with image nginx:latest.
+
+Step 2: Apply the manifest
+bash
+kubectl apply -f nginx-replicaset.yaml
+Step 3: Verify
+bash
+# Confirm the ReplicaSet exists with the right replica count
+kubectl get replicaset nginx-replicaset
+
+# Confirm 4 pods are running with the correct labels and image
+kubectl get pods -l app=nginx_app,type=front-end -o wide
+
+# Detailed check (labels, container name, image)
+kubectl describe replicaset nginx-replicaset
+Expected output from kubectl get replicaset nginx-replicaset:
+
+text
+NAME               DESIRED   CURRENT   READY   AGE
+nginx-replicaset   4         4         4       ...
+And from the pods query you should see 4 pods with names like nginx-replicaset-xxxxx, all in Running status.
+
+Let me know if you'd like me to also show how to verify the container name inside a pod (kubectl get pod <pod> -o jsonpath='{.spec.containers[0].name}'), or if anything in the apply step errors out.
+
