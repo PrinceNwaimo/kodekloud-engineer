@@ -1,0 +1,98 @@
+The Nautilus DevOps team is setting up recurring tasks on different schedules. 
+Currently, they're developing scripts to be executed periodically. 
+To kickstart the process, they're creating cron jobs in the Kubernetes cluster with placeholder commands. Follow the instructions below:
+
+Create a cronjob named xfusion.
+
+Set Its schedule to something like */11 * * * *. You can set any schedule for now.
+
+Name the container cron-xfusion.
+
+Utilize the nginx image with latest tag (specify as nginx:latest).
+
+Execute the dummy command echo Welcome to xfusioncorp!.
+
+Ensure the restart policy is OnFailure.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+
+CronJob Manifest
+yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: xfusion
+spec:
+  schedule: "*/11 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cron-xfusion
+            image: nginx:latest
+            command:
+            - /bin/sh
+            - -c
+            - echo Welcome to xfusioncorp!
+          restartPolicy: OnFailure
+Key Points Explained
+apiVersion: batch/v1 – CronJobs live in the batch API group (stable since k8s 1.21).
+
+schedule: "*/11 * * * *" – Runs every 11 minutes.
+
+restartPolicy: OnFailure – Restarts the container only if it exits with a non-zero status (note: this goes at the pod spec level, not the container level).
+
+command – We wrap the echo in /bin/sh -c so the shell interprets it (required since echo in a container needs a shell; alternatively you could use args but explicit command is clearer here).
+
+Apply and Verify
+1. Apply the manifest:
+
+bash
+cat <<EOF | kubectl apply -f -
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: xfusion
+spec:
+  schedule: "*/11 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cron-xfusion
+            image: nginx:latest
+            command:
+            - /bin/sh
+            - -c
+            - echo Welcome to xfusioncorp!
+          restartPolicy: OnFailure
+EOF
+2. Verify the CronJob was created:
+
+bash
+kubectl get cronjob xfusion
+Expected output:
+
+text
+NAME      SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+xfusion   */11 * * * *  False     0        <none>          5s
+3. Inspect full details (confirm image, command, restartPolicy):
+
+bash
+kubectl describe cronjob xfusion
+4. (Optional) Trigger a manual job to test the command immediately:
+
+bash
+kubectl create job --from=cronjob/xfusion xfusion-manual-test
+kubectl logs job/xfusion-manual-test
+You should see: Welcome to xfusioncorp!
+
+5. Clean up the manual test job afterwards:
+
+bash
+kubectl delete job xfusion-manual-test
+The CronJob will now fire automatically every 11 minutes and produce a Job pod that runs the placeholder command with the nginx:latest image.
