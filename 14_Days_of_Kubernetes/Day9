@@ -1,0 +1,73 @@
+The Nautilus DevOps team is crafting jobs in the Kubernetes cluster. 
+While they're developing actual scripts/commands, they're currently setting up templates and testing jobs with dummy commands. 
+Please create a job template as per details given below:
+
+Create a job named countdown-datacenter.
+
+The spec template should be named countdown-datacenter (under metadata), and the container should be named container-countdown-datacenter
+
+Utilize image debian with latest tag (ensure to specify as debian:latest), and set the restart policy to Never.
+
+Execute the command sleep 5
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+
+yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: countdown-datacenter
+spec:
+  template:
+    metadata:
+      name: countdown-datacenter
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: container-countdown-datacenter
+        image: debian:latest
+        command: ["sleep"]
+        args: ["5"]
+Now let me apply this Job to the cluster:
+
+bash
+cat <<EOF | kubectl apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: countdown-datacenter
+spec:
+  template:
+    metadata:
+      name: countdown-datacenter
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: container-countdown-datacenter
+        image: debian:latest
+        command: ["sleep"]
+        args: ["5"]
+EOF
+Explanation of the configuration:
+
+Field	Value	Description
+metadata.name	countdown-datacenter	Name of the Job
+spec.template.metadata.name	countdown-datacenter	Name of the Pod template
+spec.template.spec.restartPolicy	Never	Pod won't be restarted on failure
+containers[0].name	container-countdown-datacenter	Container name
+containers[0].image	debian:latest	Debian image with latest tag
+command / args	sleep 5	Executes sleep 5
+Verify the Job was created:
+
+bash
+kubectl get jobs
+kubectl describe job countdown-datacenter
+Check the pod status (it will complete after ~5 seconds):
+
+bash
+kubectl get pods -l job-name=countdown-datacenter
+You should see the Job created successfully, and the pod will transition from Running to Completed after the 5-second sleep command finishes.
+
+
