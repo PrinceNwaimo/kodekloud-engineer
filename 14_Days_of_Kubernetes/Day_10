@@ -1,0 +1,85 @@
+The Nautilus DevOps team needs a time check pod created in a specific Kubernetes namespace for logging purposes. 
+Initially, it's for testing, but it may be integrated into an existing cluster later. Here's what's required:
+
+
+Create a pod called time-check in the devops namespace. The pod should contain a container named time-check, utilizing the busybox image with the latest tag (specify as busybox:latest).
+
+Create a config map named time-config with the data TIME_FREQ=6 in the same namespace.
+
+Configure the time-check container to execute the command: while true; do date; sleep $TIME_FREQ;done. 
+Ensure the result is written /opt/security/time/time-check.log. Also, add an environmental variable TIME_FREQ in the container, fetching its value from the config map TIME_FREQ key.
+
+Create a volume log-volume and mount it at /opt/security/time within the container.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+
+The devops namespace doesn't exist yet. Let's create it first, then apply the resources.
+
+Step 1: Create the devops Namespace
+bash
+kubectl create namespace devops
+Step 2: Apply the ConfigMap and Pod
+bash
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: time-config
+  namespace: devops
+data:
+  TIME_FREQ: "6"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: time-check
+  namespace: devops
+spec:
+  containers:
+  - name: time-check
+    image: busybox:latest
+    command: ["/bin/sh", "-c", "while true; do date >> /opt/security/time/time-check.log; sleep \$TIME_FREQ; done"]
+    env:
+    - name: TIME_FREQ
+      valueFrom:
+        configMapKeyRef:
+          name: time-config
+          key: TIME_FREQ
+    volumeMounts:
+    - name: log-volume
+      mountPath: /opt/security/time
+  volumes:
+  - name: log-volume
+    emptyDir: {}
+EOF
+Step 3: Verify
+bash
+# Confirm namespace exists
+kubectl get ns devops
+
+# Confirm resources
+kubectl get configmap time-config -n devops
+kubectl get pod time-check -n devops
+
+# Wait a few seconds, then check the log is being written
+sleep 15
+kubectl exec -it time-check -n devops -- cat /opt/security/time/time-check.log
+
+# Confirm the env var
+kubectl exec -it time-check -n devops -- env | grep TIME_FREQ
+You should now see:
+
+time-config ConfigMap listed in devops
+
+time-check pod in Running state
+
+Log entries with timestamps appearing every 6 seconds
+
+TIME_FREQ=6 in the container environment
+
+If you'd prefer to make namespace creation idempotent (safe to re-run), use:
+
+bash
+kubectl create namespace devops --dry-run=client -o yaml | kubectl apply -f -
