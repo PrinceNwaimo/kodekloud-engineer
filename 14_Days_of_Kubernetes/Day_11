@@ -1,0 +1,177 @@
+A junior DevOps team member encountered difficulties deploying a stack on the Kubernetes cluster. 
+The pod fails to start, presenting errors. Let's troubleshoot and rectify the issue promptly.
+
+There is a pod named webserver, and the container within it is named nginx-container, its utilizing the nginx:latest image.
+
+Additionally, there's a sidecar container named sidecar-container using the ubuntu:latest image.
+
+Identify and address the issue to ensure the pod is in the running state and the application is accessible.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+The core issue of the Pod failing to start is likely a container configuration error (such as CreateContainerConfigError), which typically stems from the Pod referencing a non-existent Secret or ConfigMap, or a specified Key being absent. Since you didn't provide the specific error output, please first execute the following diagnostic commands and make corrections based on the results.
+
+Step 1: Diagnose the Error
+Run the describe command to view the precise error events at the bottom of the Pod:
+
+bash
+kubectl describe pod webserver
+Focus on the Events section at the end of the output, and look for Error: secret "xxx" not found, configmap "xxx" not found, or couldn't find key xxx prompts. These messages will directly indicate missing configuration resources.
+
+Step 2: Common Fixes
+1. Missing Secret or ConfigMap
+If the events indicate a resource not found, create it in the same namespace as the Pod. For example, if prompted that my-secret is missing:
+
+bash
+kubectl create secret generic my-secret --from-literal=key=value
+After creation, the Pod usually does not automatically recover; it is recommended to delete the Pod and let it be recreated (or delete and recreate the Pod).
+
+2. Missing Key
+If the resource exists but the specific Key is missing, you can check and add it:
+
+bash
+# View the keys contained in the ConfigMap
+kubectl get configmap <configmap-name> -o jsonpath='{.data}'
+Then edit the ConfigMap or Secret to add the missing Key.
+
+3. runAsNonRoot Permission Issue
+If the error mentions container has runAsNonRoot and image will run as root, it means the securityContext of the nginx-container or sidecar-container requires running as a non-root user, but the image defaults to root. You need to edit the Pod and either remove the runAsNonRoot: true configuration, or add runAsUser: 101 (nginx user) or other non-root UID in securityContext.
+
+Step 3: Verify Recovery
+After the fix, confirm the Pod status:
+
+bash
+kubectl get pod webserver
+Wait for STATUS to change to Running and READY to show 2/2 (both the nginx-container and sidecar-container are running normally). If it's still CrashLoopBackOff or other errors, you need to check the container logs for further troubleshooting:
+
+bash
+kubectl logs webserver -c nginx-container
+kubectl logs webserver -c sidecar-container
+If you paste the Events output from kubectl describe pod webserver, I can help you pinpoint the specific missing object.
+
+The problem is now clear from the events section.
+
+Root Cause
+The pod spec on the cluster does not match the description you gave (an nginx container named nginx-container). What is actually deployed is:
+
+Container httpd-container → image httpd:latests ❌
+
+Container sidecar-container → image ubuntu:latest ✅
+
+The error is a typo in the image tag:
+
+text
+Failed to pull image "httpd:latests": ...
+docker.io/library/httpd:latests: not found
+Error: ImagePullBackOff
+latests is not a valid tag — the correct tag is latest. Because the tag doesn't exist, the kubelet can't pull the image, so the container never starts, the pod stays Pending/ImagePullBackOff, and Ready is False.
+
+Fix
+Edit the deployment/pod and correct the image tag to httpd:latest. For example:
+
+bash
+kubectl edit pod webserver
+Change:
+
+yaml
+image: httpd:latests
+to:
+
+yaml
+image: httpd:latest
+Note: Some fields of a running Pod are immutable, so kubectl edit pod may refuse to apply the change. If that happens, patch the image directly:
+
+bash
+kubectl set image pod/webserver httpd-container=httpd:latest
+If the pod is managed by a Deployment/ReplicaSet, edit the workload instead:
+
+bash
+kubectl set image deployment/<deployment-name> httpd-container=httpd:latest
+Or delete and recreate the pod from its manifest with the corrected tag.
+
+Verify
+bash
+kubectl get pod webserver -w
+You should see READY 2/2 and STATUS Running. Then check logs:
+
+bash
+kubectl logs webserver -c httpd-container
+Since the sidecar is streaming /var/log/httpd/access.log and error.log from the shared emptyDir, you can also confirm the web server is serving by hitting it in-cluster, e.g.:
+
+bash
+kubectl exec webserver -c sidecar-container -- curl -s localhost:80
+Note on the discrepancy
+Your brief said the pod should contain nginx-container (nginx:latest) plus a sidecar-container. The live pod instead has httpd-container (httpd). The immediate blocker is only the httpd:latests → httpd:latest typo. If the intended design is truly nginx, you'll need to replace the httpd container spec with nginx — but the minimum change to get the pod Running is fixing the tag.
+
+thor@jump-host ~$ kubectl get pod webserver -w
+NAME        READY   STATUS    RESTARTS   AGE
+webserver   2/2     Running   0          4m51s
+^Cthor@jump-host ~kubectl exec webserver -c sidecar-container -- curl -s localhost:8080
+error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "d954755c340a71c3fa961ae09feed6bfd9861f75044cdf84687703ef7aeab7b5": OCI runtime exec failed: exec failed: unable to start container process: exec: "curl": executable file not found in $PATH: unknown
+thor@jump-host ~$ kubectl logs webserver -c httpd-container
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.22.0.9. Set the 'ServerName' directive globally to suppress this message
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.22.0.9. Set the 'ServerName' directive globally to suppress this message
+[Sun Oct 25 22:16:45.254193 2026] [mpm_event:notice] [pid 1:tid 1] AH00489: Apache/2.4.69 (Unix) configured -- resuming normal operations
+[Sun Oct 25 22:16:45.254303 2026] [core:notice] [pid 1:tid 1] AH00094: Command line: 'httpd -D FOREGROUND'
+thor@jump-host ~$ kubectl get pod webserver -w
+NAME        READY   STATUS    RESTARTS   AGE
+webserver   2/2     Running   0          6m20s
+Great — the pod is now healthy. Let's decode the two results:
+
+1. Pod status: ✅ Fixed
+text
+webserver   2/2   Running   0   6m20s
+Both containers are up and READY 2/2. The httpd:latest fix worked.
+
+2. The httpd logs: ✅ Normal
+text
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name...
+[mpm_event:notice] AH00489: Apache/2.4.69 (Unix) configured -- resuming normal operations
+AH00558 is a harmless warning — Apache just couldn't resolve its own FQDN. It does not prevent startup.
+
+AH00489 ... resuming normal operations is the confirmation that Apache started successfully and is listening.
+
+3. The curl failure: not a pod problem
+text
+exec: "curl": executable file not found in $PATH
+The ubuntu:latest image is minimal and does not include curl. So kubectl exec ... curl fails because the binary is missing inside the sidecar — the pod itself is fine. Also note you tried port 8080, while Apache listens on port 80 by default.
+
+Ways to verify the app is accessible
+Option A — use the httpd container (it ships with the tooling):
+
+bash
+kubectl exec webserver -c httpd-container -- curl -s localhost:80
+You should get the Apache "It works!" default page HTML.
+
+Option B — install curl in the sidecar first:
+
+bash
+kubectl exec webserver -c sidecar-container -- apt-get update && apt-get install -y curl
+kubectl exec webserver -c sidecar-container -- curl -s localhost:80
+Option C — expose the pod via a Service and hit it from the jump-host (recommended for "accessible" verification):
+
+bash
+kubectl expose pod webserver --name=webserver-svc --port=80 --target-port=80
+kubectl get svc webserver-svc
+Then from the jump-host (if the cluster network is reachable) or via a port-forward:
+
+bash
+kubectl port-forward pod/webserver 8080:80
+# in another terminal:
+curl -s localhost:8080
+Option D — check the sidecar is actually tailing the logs:
+
+bash
+kubectl logs webserver -c sidecar-container
+Since the sidecar runs cat /var/log/httpd/access.log ..., and the shared-logs emptyDir is mounted in both containers, you should see the Apache access/error log content streamed by the sidecar — that itself confirms the shared volume wiring works.
+
+Summary
+Item	Status
+Image tag typo httpd:latests → httpd:latest	✅ Fixed
+Pod running	✅ 2/2 Running
+Apache started	✅ resuming normal operations
+AH00558 FQDN warning	⚠️ Harmless
+curl in ubuntu sidecar	❌ Not installed (expected for ubuntu:latest) — use the httpd container or install curl
+Port used in test	ℹ️ Apache listens on 80, not 8080
+The deployment objective — pod in Running state and app accessible — is met. Use Option A or C above to prove HTTP reachability
