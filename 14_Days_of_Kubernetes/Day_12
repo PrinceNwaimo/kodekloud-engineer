@@ -1,0 +1,91 @@
+An application deployed on the Kubernetes cluster requires an update with new features developed by the Nautilus application development team. 
+The existing setup includes a deployment named nginx-deployment and a service named nginx-service. 
+Below are the necessary changes to be implemented without deleting the deployment and service:
+
+
+1.) Modify the service nodeport from 30008 to 32165
+
+2.) Change the replicas count from 1 to 5
+
+3.) Update the image from nginx:1.19 to nginx:latest
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+Step 1: Check Current State
+First, let's verify the current configuration:
+
+bash
+kubectl get deployment nginx-deployment -o wide
+kubectl get service nginx-service -o wide
+Step 2: Update the Service NodePort
+To modify the service nodeport from 30008 to 32165, you can use either kubectl patch or kubectl edit:
+
+Option A: Using kubectl patch (recommended)
+
+bash
+kubectl patch service nginx-service -p '{"spec":{"ports":[{"port":80,"nodePort":32165,"targetPort":80,"protocol":"TCP"}]}}'
+Option B: Using kubectl edit
+
+bash
+kubectl edit service nginx-service
+Then change the nodePort value from 30008 to 32165:
+
+yaml
+spec:
+  ports:
+  - nodePort: 32165   # changed from 30008
+    port: 80
+    protocol: TCP
+    targetPort: 80
+⚠️ Important: If the service originally had more than one port defined, using patch with the array will replace the entire ports list. In that case, use kubectl edit instead, or include all ports in the patch. Verify the current ports first with kubectl get svc nginx-service -o yaml.
+
+Step 3: Update Replicas Count (1 → 5)
+bash
+kubectl scale deployment nginx-deployment --replicas=5
+Step 4: Update the Image (nginx:1.19 → nginx:latest)
+bash
+kubectl set image deployment/nginx-deployment nginx=nginx:latest
+Replace nginx in nginx=nginx:latest with the actual container name if it differs. Check with:
+
+bash
+kubectl get deployment nginx-deployment -o jsonpath='{.spec.template.spec.containers[*].name}'
+Step 5: Verify the Rollout
+bash
+kubectl rollout status deployment/nginx-deployment
+Step 6: Confirm All Changes
+bash
+# Check replicas, image
+kubectl get deployment nginx-deployment -o wide
+
+# Check service nodeport
+kubectl get service nginx-service -o wide
+
+# Detailed confirmation
+kubectl describe deployment nginx-deployment | grep -E "Replicas|Image"
+kubectl get svc nginx-service -o jsonpath='{.spec.ports[*].nodePort}'
+All-in-One Command Sequence
+If you prefer to run everything at once:
+
+bash
+# 1. Update NodePort
+kubectl patch service nginx-service -p '{"spec":{"ports":[{"port":80,"nodePort":32165,"targetPort":80,"protocol":"TCP"}]}}'
+
+# 2. Scale replicas
+kubectl scale deployment nginx-deployment --replicas=5
+
+# 3. Update image
+kubectl set image deployment/nginx-deployment nginx=nginx:latest
+
+# 4. Verify
+kubectl rollout status deployment/nginx-deployment
+kubectl get deploy,svc -o wide
+Notes
+Zero downtime: Scaling and image updates are performed via a rolling update, so the deployment/service remain intact and pods are gradually replaced.
+
+Image pull: Since nginx:latest is a public image, no credentials are needed. If the cluster has imagePullPolicy: IfNotPresent and the tag is latest, Kubernetes defaults to Always for latest, so nodes will pull the newest image.
+
+NodePort range: 32165 falls within the default valid range (30000–32767), so no kube-apiserver flag change is needed.
+
+No deletion required: All three operations (patch, scale, set image) modify resources in place — no kubectl delete is performed.
+
