@@ -1,0 +1,132 @@
+The Nautilus DevOps team aims to establish a ReplicaSet to deploy multiple pods for hosting applications requiring a highly available infrastructure. 
+Here are the specific details to create the ReplicaSet:
+
+
+a.) Create a ReplicaSet using the nginx image with the latest tag.
+
+b.) Name the ReplicaSet nginx-replicaset-t3q5.
+
+c.) Ensure all pods are in the Running state after deployment.
+
+d.) The ReplicaSet should manage 3 replicas (adjustable based on your needs).
+
+e.) The pods managed by the ReplicaSet should have the label app: nginx-t3q5.
+
+Note: The kubectl utility on jump-host has been configured to work with the Kubernetes cluster.
+
+ReplicaSet 'nginx-replicaset-t3q5' exists
+
+Image used is 'nginx'
+
+Pods are 'Running'
+
+SOLUTION
+Step 1: Create the ReplicaSet template file
+Create a file (e.g., /home/thor/nginx-replicaset-t3q5.yml) with the following content:
+
+yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-replicaset-t3q5
+  labels:
+    app: nginx-t3q5
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-t3q5
+  template:
+    metadata:
+      labels:
+        app: nginx-t3q5
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+You can create it with a heredoc:
+
+bash
+cat <<'EOF' > /home/thor/nginx-replicaset-t3q5.yml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-replicaset-t3q5
+  labels:
+    app: nginx-t3q5
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-t3q5
+  template:
+    metadata:
+      labels:
+        app: nginx-t3q5
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+EOF
+⚠️ Critical: For a ReplicaSet, the spec.selector.matchLabels must match the pod template's metadata.labels. If they don't, the API server rejects the object. Also note apiVersion: apps/v1 (not v1) — ReplicaSets live under apps/v1.
+
+Step 2: Apply the ReplicaSet
+bash
+kubectl apply -f /home/thor/nginx-replicaset-t3q5.yml
+Expected output:
+
+text
+replicaset.apps/nginx-replicaset-t3q5 created
+Or equivalently:
+
+bash
+kubectl create -f /home/thor/nginx-replicaset-t3q5.yml
+Step 3: Verify the ReplicaSet
+bash
+kubectl get replicaset nginx-replicaset-t3q5
+Expected output (once pods are ready):
+
+text
+NAME                     DESIRED   CURRENT   READY   AGE
+nginx-replicaset-t3q5    3         3         3       ...
+Step 4: Verify the pods are running
+bash
+kubectl get pods -l app=nginx-t3q5
+Expected output:
+
+text
+NAME                           READY   STATUS    RESTARTS   AGE
+nginx-replicaset-t3q5-xxxxx    1/1     Running   0          ...
+nginx-replicaset-t3q5-yyyyy    1/1     Running   0          ...
+nginx-replicaset-t3q5-zzzzz    1/1     Running   0          ...
+Step 5: Confirm the image
+bash
+kubectl get replicaset nginx-replicaset-t3q5 -o jsonpath='{.spec.template.spec.containers[0].image}'
+Expected output:
+
+text
+nginx:latest
+Requirements checklist
+Requirement	Status
+ReplicaSet nginx-replicaset-t3q5 created	✅
+Uses nginx image (latest tag)	✅ nginx:latest
+All pods in Running state	✅ Verified via kubectl get pods -l app=nginx-t3q5
+Manages 3 replicas	✅ spec.replicas: 3
+Pods labeled app: nginx-t3q5	✅ Set in spec.template.metadata.labels
+Notes / troubleshooting
+selector does not match template labels error — the spec.selector.matchLabels and spec.template.metadata.labels must be identical (the template labels are a superset of the selector matchLabels). Fix the mismatch and re-apply.
+
+apiVersion error — ReplicaSets are apps/v1, not v1. Using v1 results in no matches for kind "ReplicaSet".
+
+Pods Pending — usually insufficient cluster resources. Check with kubectl describe pod <pod-name> and kubectl get events.
+
+ImagePullBackOff — node can't pull nginx:latest; check network/registry access with kubectl describe pod <pod-name>.
+
+Adjusting replicas later — kubectl scale replicaset nginx-replicaset-t3q5 --replicas=<N>, or kubectl edit rs nginx-replicaset-t3q5.
+
+ReplicaSet vs Deployment — ReplicaSets don't support rolling updates natively (you'd change the template and old pods get replaced all at once). For production apps, a Deployment (which manages a ReplicaSet) is generally preferred. Here, a plain ReplicaSet was explicitly requested.
+
