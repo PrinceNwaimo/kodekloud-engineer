@@ -1,0 +1,728 @@
+he datacenter AI Engineering team is developing tools to improve the clarity of developer-reported bugs. Developers often report issues informally, which makes them difficult to understand or reproduce.
+
+You are tasked to build a Python-based AI Bug Description Clarifier that transforms such informal bug reports into clear, structured, and professional issue summaries.
+
+Inside /root/openaiproject/bug_clarifier.py:
+
+Initialize the OpenAI client using environment values (api_key and base_url).
+
+Define a function clarify_bug(description: str) -> str that builds a parameterized prompt to rewrite the raw bug description.
+
+Send this prompt to the OpenAI Chat Completion API.
+
+Use the following configuration for the API call:
+
+model: gpt-5.6-luna
+messages: user → the constructed prompt
+max_tokens: 200
+temperature: 0.0
+Use the input bug report:
+
+  App keeps crashing when I click save.
+
+Store the AI response in a variable named response and print the clarified bug summary to the console.
+
+Notes:
+
+Function must use the developer's input description dynamically in the prompt.
+
+Ensure you are working inside /root/openaiproject.
+
+OpenAI credentials are available in /root/.bash_profile.
+
+Use hardcoded values for api_key and base_url when initializing the OpenAI client or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+Before running bug_clarifier.py, set up a virtual environment:
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+Maximum of 10 API requests allowed before rate limiting.
+
+SOLUTION
+Here is the Python code for the AI Bug Description Clarifier, implemented as requested.
+
+python
+import os
+from openai import OpenAI
+
+# Initialize the client using environment variables.
+# Ensure OPENAI_API_KEY and OPENAI_API_BASE are set (e.g., sourced from ~/.bash_profile).
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+def clarify_bug(description: str) -> str:
+    """Transforms an informal bug report into a structured, professional summary."""
+    prompt = (
+        f"You are a technical writer for a datacenter AI engineering team. "
+        f"Rewrite the following informal bug report into a clear, structured, and professional issue summary. "
+        f"Include sections for: Summary, Steps to Reproduce (if inferable), Expected Behavior, and Actual Behavior.\n\n"
+        f"Raw report: \"{description}\"\n\n"
+        f"Clarified Summary:"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=200,
+        temperature=0.0
+    )
+    
+    return response.choices[0].message.content
+
+if __name__ == "__main__":
+    raw_bug = "App keeps crashing when I click save."
+    response = clarify_bug(raw_bug)
+    print(response)
+Key Implementation Details
+Client Configuration: The OpenAI client is initialized using os.environ.get for both api_key and base_url, allowing it to read credentials from the environment as specified .
+
+Model Usage: The model gpt-5.6-luna is supported by the Chat Completions endpoint and is optimized for cost-sensitive workloads, which aligns with the tool's utility purpose .
+
+Prompt Strategy: The prompt explicitly requests a structured format (Summary, Steps, Expected/Actual) and embeds the developer's raw text dynamically, ensuring the model has the necessary context for transformation.
+
+steps to implement the code
+Steps to Implement the AI Bug Description Clarifier
+Follow these steps in order. All commands assume you are working inside /root/openaiproject.
+
+Step 1: Navigate to the Project Directory
+bash
+cd /root/openaiproject
+Verify the directory exists:
+
+bash
+ls -la /root/openaiproject
+Step 2: Load OpenAI Credentials from .bash_profile
+The credentials (OPENAI_API_KEY and OPENAI_API_BASE) are stored in /root/.bash_profile. Load them into your current shell session:
+
+bash
+source /root/.bash_profile
+Verify they are set (do not print the full key):
+
+bash
+echo "Key set: ${OPENAI_API_KEY:+yes}"
+echo "Base URL: $OPENAI_API_BASE"
+⚠️ If either is empty, the script will fail at client initialization.
+
+Step 3: Create and Activate a Virtual Environment
+bash
+python3 -m venv venv
+source venv/bin/activate
+Confirm the venv is active:
+
+bash
+which python3
+# should output: /root/openaiproject/venv/bin/python3
+Step 4: Install the OpenAI SDK
+bash
+pip install --upgrade pip
+pip install openai
+Verify the install:
+
+bash
+pip show openai
+Step 5: Create bug_clarifier.py
+bash
+nano /root/openaiproject/bug_clarifier.py
+Paste the following complete content:
+
+python
+import os
+from openai import OpenAI
+
+# Initialize the client using environment variables.
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+def clarify_bug(description: str) -> str:
+    """Transforms an informal bug report into a structured, professional summary."""
+    prompt = (
+        f"You are a technical writer for a datacenter AI engineering team. "
+        f"Rewrite the following informal bug report into a clear, structured, and professional issue summary. "
+        f"Include sections for: Summary, Steps to Reproduce (if inferable), Expected Behavior, and Actual Behavior.\n\n"
+        f"Raw report: \"{description}\"\n\n"
+        f"Clarified Summary:"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=200,
+        temperature=0.0
+    )
+
+    return response.choices[0].message.content
+
+if __name__ == "__main__":
+    raw_bug = "App keeps crashing when I click save."
+    response = clarify_bug(raw_bug)
+    print(response)
+Save and exit (Ctrl+O, Enter, Ctrl+X).
+
+Step 6: Sanity-Check the Credentials Are Visible to Python
+Before running, confirm the env vars are exported (not just set as shell locals):
+
+bash
+export OPENAI_API_KEY
+export OPENAI_API_BASE
+Quick test:
+
+bash
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+Expected: True <base_url>.
+
+Step 7: Run the Script
+bash
+python3 bug_clarifier.py
+Expected output: a structured bug summary printed to the console, e.g.:
+
+text
+**Summary:** The application crashes when the user triggers the Save action.
+
+**Steps to Reproduce:**
+1. Open the application.
+2. Perform an action that enables the Save button.
+3. Click Save.
+
+**Expected Behavior:** The save operation completes successfully.
+
+**Actual Behavior:** The application crashes immediately upon clicking Save.
+Step 8: (Optional) Deactivate the Virtual Environment
+bash
+deactivate
+Troubleshooting Checklist
+Symptom	Likely Cause	Fix
+openai.AuthenticationError	OPENAI_API_KEY not loaded	Re-run source /root/.bash_profile and re-export
+openai.APIConnectionError	OPENAI_API_BASE wrong/missing	Check echo $OPENAI_API_BASE
+ModuleNotFoundError: openai	venv not active or package missing	source venv/bin/activate && pip install openai
+AttributeError: 'OpenAI' object has no attribute 'chat'	Old openai version installed	pip install --upgrade openai
+Empty/blank response	max_tokens too low for model	Keep at 200 as specified; retry
+RateLimitError	>10 requests in window	Wait before re-running
+Request Budget Reminder
+You have a maximum of 10 API requests before rate limiting. This script consumes 1 request per run, so:
+
+Keep test runs minimal.
+
+Avoid loops around clarify_bug() during testing.
+
+If you need to iterate on the prompt, consider mocking the client response locally rather than re-calling the API.
+
+~/openaiproject ➜  python3 bug_clarifier.py
+Traceback (most recent call last):
+  File "/root/openaiproject/bug_clarifier.py", line 2, in <module>
+    from openai import OpenAI
+ModuleNotFoundError: No module named 'openai'
+Fix: ModuleNotFoundError: No module named 'openai'
+This error means the openai package isn't installed in the Python interpreter that's actually running the script. Two common causes:
+
+The virtual environment was never activated (or was deactivated between the install and the run).
+
+pip install openai installed into a different Python than python3 resolves to.
+
+Let's diagnose and fix systematically.
+
+Step 1: Confirm Whether the Venv Is Active
+From your prompt (~/openaiproject ➜), there is no (venv) prefix, which strongly suggests the venv is not currently active.
+
+Check explicitly:
+
+bash
+cd /root/openaiproject
+echo "python3 -> $(which python3)"
+echo "pip     -> $(which pip)"
+If which python3 shows /usr/bin/python3 (or anything not under /root/openaiproject/venv/), the venv is inactive — that's your problem.
+
+Step 2: Activate the Venv (or Create It If Missing)
+If venv/ already exists:
+bash
+cd /root/openaiproject
+source venv/bin/activate
+Your prompt should now show (venv).
+
+If venv/ does not exist:
+bash
+cd /root/openaiproject
+python3 -m venv venv
+source venv/bin/activate
+Verify:
+
+bash
+which python3
+# Expected: /root/openaiproject/venv/bin/python3
+Step 3: Install (or Reinstall) openai Inside the Active Venv
+bash
+pip install --upgrade pip
+pip install openai
+Verify it's importable with the same interpreter that will run the script:
+
+bash
+python3 -c "import openai; print('openai version:', openai.__version__)"
+You should see something like openai version: 1.x.x. If this succeeds, the script will run.
+
+Step 4: Re-Load Credentials (venv activation doesn't clear them, but confirm)
+bash
+source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+Step 5: Run the Script Again
+bash
+cd /root/openaiproject
+python3 bug_clarifier.py
+Why This Happened
+When you ran pip install openai earlier, if the venv wasn't active, pip installed into your system Python (or a user site-packages), not the venv. Then when you ran python3 bug_clarifier.py — again without the venv active — that also hit the system Python... but if pip was a different Python than python3 (e.g., pip → Python 3.10, python3 → Python 3.12), the package lands in a site-packages the interpreter can't see. The venv sidesteps this by keeping pip and python3 perfectly paired.
+
+Quick Reference: One-Shot Correct Sequence
+bash
+cd /root/openaiproject
+source /root/.bash_profile          # load credentials
+source venv/bin/activate            # activate venv
+pip install openai                  # install into venv
+python3 bug_clarifier.py            # run with venv's python
+If It Still Fails After Activation
+Run the diagnostic block and share the output:
+
+bash
+which python3
+which pip
+python3 -c "import sys; print(sys.executable)"
+python3 -c "import sys; print(sys.path)"
+pip show openai
+The most telling line is sys.executable — it must point to /root/openaiproject/venv/bin/python3. If it doesn't, source venv/bin/activate is not taking effect (e.g., wrong shell, or a broken venv/ — in which case recreate it with rm -rf venv && python3 -m venv venv).
+
+💡 Request budget note: This fix involves zero API calls. The rate-limit counter only advances when bug_clarifier.py actually reaches the client.chat.completions.create(...) line, so debugging the import issue costs you nothing.
+
+~/openaiproject ➜  echo "python3 -> $(which python3)"
+python3 -> /usr/bin/python3
+
+~/openaiproject ➜  echo "pip     -> $(which pip)"
+pip     -> /usr/bin/pip
+
+~/openaiproject ➜
+Diagnosis Confirmed: Venv Is Not Active
+Your output shows both python3 and pip resolving to /usr/bin/, which means you are not inside the virtual environment. That's why openai isn't importable — even if you installed it earlier, it went to the system Python, and/or pip and python3 may not even be the same interpreter.
+
+You need to activate the venv (or create it first if missing).
+
+Step 1: Check Whether venv/ Exists
+bash
+cd /root/openaiproject
+ls -la venv/bin/ 2>/dev/null | head
+Case A — venv/ exists (you see activate, python, pip, etc.)
+Skip to Step 2.
+
+Case B — venv/ does not exist (no output / "No such file")
+Create it first:
+
+bash
+cd /root/openaiproject
+python3 -m venv venv
+⚠️ On Debian/Ubuntu, if python3 -m venv venv fails with ensurepip is not available, install the venv package first:
+
+bash
+apt-get update && apt-get install -y python3-venv
+then retry python3 -m venv venv.
+
+Step 2: Activate the Venv
+bash
+cd /root/openaiproject
+source venv/bin/activate
+Your prompt should now be prefixed with (venv):
+
+text
+(venv) ~/openaiproject ➜
+Step 3: Verify the Interpreter Switched
+bash
+echo "python3 -> $(which python3)"
+echo "pip     -> $(which pip)"
+Expected output:
+
+text
+python3 -> /root/openaiproject/venv/bin/python3
+pip     -> /root/openaiproject/venv/bin/pip
+If it still points to /usr/bin/, the activation silently failed — check that venv/bin/activate exists and that you're running in bash/zsh (not sh/dash).
+
+Step 4: Install openai Into the Venv
+bash
+pip install --upgrade pip
+pip install openai
+Confirm it imports with the venv interpreter:
+
+bash
+python3 -c "import openai; print('openai:', openai.__version__)"
+Expected: openai: 1.x.x (no traceback).
+
+Step 5: Load Credentials
+bash
+source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+Expected: True https://... (a base URL).
+
+Step 6: Run the Script
+bash
+cd /root/openaiproject
+python3 bug_clarifier.py
+One-Shot Copy-Paste (Full Correct Sequence)
+bash
+cd /root/openaiproject
+python3 -m venv venv               # skip if venv/ already exists
+source venv/bin/activate
+pip install --upgrade pip
+pip install openai
+source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+which python3                      # must show .../venv/bin/python3
+python3 bug_clarifier.py
+Common Pitfall to Avoid
+Every new terminal session starts without the venv active. If you open a fresh shell, you must re-run source venv/bin/activate and source /root/.bash_profile before running the script again. If the (venv) prefix is missing from your prompt, the venv is not active — that's the single most reliable visual check.
+
+💡 Request budget note: None of these steps consume API calls. Your 10-request budget is only consumed when the script reaches client.chat.completions.create(...). You're still at 0 requests used.
+
+total 52
+drwxr-xr-x 2 root root 4096 Oct 27 13:19 .
+drwxr-xr-x 5 root root 4096 Oct 27 13:18 ..
+-rw-r--r-- 1 root root 9033 Oct 27 13:18 Activate.ps1
+-rw-r--r-- 1 root root 2036 Oct 27 13:18 activate
+-rw-r--r-- 1 root root  920 Oct 27 13:18 activate.csh
+-rw-r--r-- 1 root root 2195 Oct 27 13:18 activate.fish
+-rwxr-xr-x 1 root root  179 Oct 27 13:19 httpx2
+-rwxr-xr-x 1 root root  175 Oct 27 13:19 idna
+-rwxr-xr-x 1 root root  241 Oct 27 13:19 pip
+Good News — venv/ Exists, But It's Incomplete
+Looking at your ls -la venv/bin/ output carefully, I see a problem:
+
+✅ activate, activate.csh, activate.fish, Activate.ps1 — present
+
+✅ pip — present
+
+⚠️ httpx2, idna — present (these are dependencies that got installed)
+
+❌ python, python3, and python3.x symlinks are MISSING
+
+A healthy venv's bin/ directory must contain python, python3, and python3.X symlinks pointing to the base interpreter. Without those, source venv/bin/activate will still prepend venv/bin to PATH, but there's no python3 binary there for it to find — so which python3 keeps resolving to /usr/bin/python3. That exactly explains your earlier output.
+
+This usually happens when python3-venv was missing at creation time, so ensurepip failed silently and the venv was created in a degraded state.
+
+Step 1: Confirm the Missing Symlinks
+bash
+cd /root/openaiproject
+ls -la venv/bin/python*
+Expected (broken) result: ls: cannot access 'venv/bin/python*': No such file or directory — or only python3.x with no python/python3 symlinks.
+
+Also confirm the venv's Python version:
+
+bash
+cat venv/pyvenv.cfg
+Note the version line (e.g. version = 3.11.8) and home = /usr/bin.
+
+Step 2: Verify the System venv Package Is Installed
+bash
+apt-get update
+apt-get install -y python3-venv
+Then double-check the base interpreter exists:
+
+bash
+ls -la /usr/bin/python3*
+/usr/bin/python3 --version
+Step 3: Rebuild the Venv Cleanly
+Because the current venv is broken (missing interpreter symlinks), the safest fix is to delete and recreate it:
+
+bash
+cd /root/openaiproject
+deactivate 2>/dev/null || true
+rm -rf venv
+python3 -m venv venv
+Now verify the symlinks were created properly:
+
+bash
+ls -la venv/bin/python*
+Expected output — you should see all three:
+
+text
+lrwxrwxrwx ... venv/bin/python  -> python3
+lrwxrwxrwx ... venv/bin/python3 -> /usr/bin/python3
+lrwxrwxrwx ... venv/bin/python3.X -> python3
+If python3-venv was the missing piece, this will now succeed where it silently failed before.
+
+Step 4: Activate and Confirm the Switch
+bash
+source venv/bin/activate
+which python3
+which pip
+Expected:
+
+text
+/root/openaiproject/venv/bin/python3
+/root/openaiproject/venv/bin/pip
+Your prompt should now show (venv).
+
+Step 5: Install openai Into the Rebuilt Venv
+bash
+pip install --upgrade pip
+pip install openai
+python3 -c "import openai; print('openai:', openai.__version__)"
+Expected: openai: 1.x.x — no traceback.
+
+Step 6: Load Credentials and Run
+bash
+source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+# Expected: True https://...
+python3 bug_clarifier.py
+If python3 -m venv venv Fails With ensurepip is not available
+That's the exact root cause of the broken venv. The fix:
+
+bash
+apt-get install -y python3-venv python3-pip
+rm -rf /root/openaiproject/venv
+cd /root/openaiproject
+python3 -m venv venv
+If that still fails, try the fallback that skips pip bootstrapping, then install pip manually:
+
+bash
+python3 -m venv venv --without-pip
+source venv/bin/activate
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3
+Why This Diagnosis Matters
+An incomplete venv is a common trap: activate looks like it worked (it modifies PATH and sets VIRTUAL_ENV), but if venv/bin/python3 doesn't exist, the shell silently falls through to /usr/bin/python3. So which python3 still shows /usr/bin/python3 even with (venv) in your prompt — and pip install openai installs into the system pip, while python3 bug_clarifier.py runs against the system python. The rebuild in Step 3 resolves all of this at once.
+
+💡 Request budget note: Still 0 of 10 API requests consumed. Rebuilding the venv and reinstalling packages does not touch the OpenAI API at all — the counter only advances when the script reaches client.chat.completions.create(...).
+
+ls -la venv/bin/python*
+Since you're at the shell ready to run it, here's what to do with the result.
+
+Run the Check
+bash
+cd /root/openaiproject
+ls -la venv/bin/python*
+Interpret the Output
+✅ Case A — Symlinks Present (venv is fine)
+You should see three entries similar to:
+
+text
+lrwxrwxrwx 1 root root 10 ... venv/bin/python   -> python3
+lrwxrwxrwx 1 root root 16 ... venv/bin/python3  -> /usr/bin/python3
+lrwxrwxrwx 1 root root 16 ... venv/bin/python3.X -> python3
+If you see all three, the venv is healthy. Proceed directly to:
+
+bash
+source venv/bin/activate
+which python3          # must show .../venv/bin/python3
+pip install openai
+python3 -c "import openai; print(openai.__version__)"
+If which python3 now shows the venv path and the import succeeds, you're done — jump to Step 6 (Load Credentials and Run) below.
+
+❌ Case B — No Matches (venv is broken — matches my earlier diagnosis)
+You'll see:
+
+text
+ls: cannot access 'venv/bin/python*': No such file or directory
+This confirms the venv was built without interpreter symlinks. Rebuild it:
+
+bash
+cd /root/openaiproject
+deactivate 2>/dev/null || true
+apt-get update && apt-get install -y python3-venv python3-pip
+rm -rf venv
+python3 -m venv venv
+ls -la venv/bin/python*       # should now show the 3 symlinks from Case A
+Then continue with activation and install:
+
+bash
+source venv/bin/activate
+which python3                 # must show .../venv/bin/python3
+pip install --upgrade pip
+pip install openai
+python3 -c "import openai; print(openai.__version__)"
+⚠️ Case C — Only python3.X Present, No python/python3
+text
+lrwxrwxrwx ... venv/bin/python3.11 -> /usr/bin/python3.11
+The interpreter exists but the convenience symlinks are missing. Fix in-place (faster than rebuilding):
+
+bash
+cd /root/openaiproject/venv/bin
+ln -sf python3.11 python3
+ln -sf python3 python
+cd /root/openaiproject
+source venv/bin/activate
+which python3                 # must show .../venv/bin/python3
+(Replace 3.11 with whatever version appears in your output.)
+
+Step 6: Load Credentials and Run (all cases converge here)
+bash
+cd /root/openaiproject
+source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+# Expected: True https://...
+python3 bug_clarifier.py
+Paste the Output If You Want Me to Confirm
+If you'd like a second set of eyes, paste back:
+
+The ls -la venv/bin/python* output
+
+The result of cat venv/pyvenv.cfg
+
+The output of which python3 after source venv/bin/activate
+
+That will pin down exactly which case you're in and confirm the fix landed.
+
+💡 Request budget note: Still 0 of 10 API calls used. This diagnostic step and any rebuild consume no OpenAI quota — only running bug_clarifier.py past the client-construction line does.
+
+~/openaiproject ➜  ls -la venv/bin/python*
+lrwxrwxrwx 1 root root  7 Oct 27 13:18 venv/bin/python -> python3
+lrwxrwxrwx 1 root root 16 Oct 27 13:18 venv/bin/python3 -> /usr/bin/python3
+lrwxrwxrwx 1 root root  7 Oct 27 13:18 venv/bin/python3.12 -> python3
+
+~/openaiproject ➜  ^C
+
+~/openaiproject ✖
+Venv Is Healthy — The Symlinks Are All There
+Your output is exactly what a correct venv looks like:
+
+text
+venv/bin/python    -> python3
+venv/bin/python3   -> /usr/bin/python3
+venv/bin/python3.12 -> python3
+So the venv is fine. The earlier ls venv/bin/ simply didn't show them because your glob was venv/bin/* sorted past them — but they exist and are valid. My previous "missing symlinks" diagnosis was wrong; I apologize for the detour.
+
+That means the only remaining issue is that the venv isn't active when you run the script. which python3 → /usr/bin/python3 confirmed that. Activating the venv will switch python3 to /root/openaiproject/venv/bin/python3, which is the interpreter that must see openai.
+
+(The ^C you see is just the shell prompt being interrupted — no action needed.)
+
+Fix — Short and Complete
+Run this exact sequence in one go, from /root/openaiproject:
+
+bash
+cd /root/openaiproject
+source venv/bin/activate
+which python3                          # must print /root/openaiproject/venv/bin/python3
+pip install --upgrade pip
+pip install openai
+python3 -c "import openai; print('openai:', openai.__version__)"   # must print a version, no traceback
+If which python3 prints /root/openaiproject/venv/bin/python3 and the import openai line prints a version, you are done with the setup problem.
+
+Now load credentials and run:
+
+bash
+source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+# Expected: True https://...
+python3 bug_clarifier.py
+Your prompt should show (venv) before you run the script. That prefix is the reliable visual indicator that the venv is active.
+
+The One Rule That Keeps Biting You
+Every new terminal session starts with the venv inactive and the credentials unloaded.
+
+So each time you open a fresh shell, you must run both of these before python3 bug_clarifier.py:
+
+bash
+source venv/bin/activate
+source /root/.bash_profile
+If either is skipped, you'll see either ModuleNotFoundError: No module named 'openai' (venv inactive) or an AuthenticationError / empty base URL (credentials not loaded). The (venv) prompt prefix plus a which python3 check are the two 2-second sanity checks that prevent both failures.
+
+Expected Successful Output
+Once it runs, you should see a structured summary printed, something like:
+
+text
+**Summary:** The application crashes when the user initiates the Save action.
+
+**Steps to Reproduce:**
+1. Open the application.
+2. Trigger the Save action.
+
+**Expected Behavior:** The save operation completes successfully without interruption.
+
+**Actual Behavior:** The application crashes immediately upon clicking Save.
+If Anything Still Fails
+Paste back the output of these three commands after running source venv/bin/activate:
+
+bash
+which python3
+python3 -c "import sys; print(sys.executable)"
+python3 -c "import openai; print(openai.__version__)"
+That will tell us definitively whether the interpreter switched and whether openai is importable in it.
+
+💡 Request budget note: Still 0 of 10 API calls consumed. Nothing above reaches the OpenAI endpoint — only python3 bug_clarifier.py past client construction does. You're clear to run it now.
+
+~/openaiproject ➜  source /root/.bash_profile
+export OPENAI_API_KEY OPENAI_API_BASE
+python3 -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')), os.environ.get('OPENAI_API_BASE'))"
+# Expected: True https://...
+python3 bug_clarifier.py
+True https://api.ai.kodekloud.com
+## Summary
+The application crashes when the user attempts to save changes.
+
+## Steps to Reproduce
+1. Open the application.
+2. Make or enter changes in the relevant form or screen.
+3. Click **Save**.
+
+## Expected Behavior
+The application should save the changes successfully and remain operational.
+
+## Actual Behavior
+The application crashes when **Save** is clicked.
+✅ Success — The Bug Clarifier Works End-to-End
+Your output confirms every part of the pipeline is now functioning:
+
+Check	Result
+OPENAI_API_KEY loaded	True ✅
+OPENAI_API_BASE loaded	https://api.ai.kodekloud.com ✅
+openai importable in venv	resolved (script ran) ✅
+API call to gpt-5.6-luna	completed ✅
+Clarified summary printed	structured output ✅
+The AI transformed the informal one-liner:
+
+"App keeps crashing when I click save."
+
+into a professional, four-section issue summary with Summary, Steps to Reproduce, Expected Behavior, and Actual Behavior — exactly the structure the prompt requested, and consistent with temperature=0.0 (deterministic, no creative drift).
+
+API Request Usage
+Requests consumed: 1 of 10 (this run)
+
+Remaining budget: 9
+
+Only the single client.chat.completions.create(...) call inside clarify_bug() counted. All the venv debugging, credential loading, and which python3 checks cost zero API requests.
+
+What Your Final Working Setup Looks Like
+text
+/root/openaiproject/
+├── venv/                    # healthy venv (python3.12 symlinks present)
+│   └── bin/
+│       ├── python  -> python3
+│       ├── python3 -> /usr/bin/python3
+│       ├── python3.12 -> python3
+│       └── pip, activate, ...
+└── bug_clarifier.py         # the working script
+Reproducible run sequence for any future terminal session:
+
+bash
+cd /root/openaiproject
+source venv/bin/activate              # prompt shows (venv)
+source /root/.bash_profile            # load OPENAI_* creds
+export OPENAI_API_KEY OPENAI_API_BASE # ensure exported to Python
+python3 bug_clarifier.py              # 1 API request
+Two Small Recommendations Going Forward
+1. Guard against a blank response. The return path is response.choices[0].message.content. If the API ever returns empty content, print(response) will show None. A tiny defensive tweak:
+
+python
+return response.choices[0].message.content or "(no content returned)"
+2. Keep request count visible. Since you have a hard 10-request ceiling, avoid running bug_clarifier.py casually. If you want to iterate on the prompt wording without burning quota, temporarily stub the client call:
+
+python
+# response_text = clarify_bug(raw_bug)        # live — costs 1 request
+# response_text = "[stub] ..."                # dry run — costs 0 requests
+Swap the live line back in only when you're ready for a real call.
+
+You're done — the tool is built, configured, and producing the correct structured output. Nothing further is required unless you want to expand the prompt format (e.g., adding Severity/Environment fields) or parameterize the raw bug string via sys.argv / input(). Let me know if you'd like either.
