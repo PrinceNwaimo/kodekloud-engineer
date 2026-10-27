@@ -1,0 +1,84 @@
+The Nautilus devops team found that one of the applications that is deployed on the cluster is having some performance issues, they want to make some changes so that it can handle some more traffic. 
+As per new updates some new changes need to be made in this existing setup. So update the deployment as per details mentioned below:
+
+
+The deployment name is blue-app-t2q5, change its replicas count from 1 to 3.
+
+Note: The kubectl utility on jump-host has been configured to work with the kubernetes cluster.
+
+Deployment 'blue-app-t2q5' exists
+
+Pods are running
+
+Deployment 'blue-app-t2q5' replicas count is '3'
+
+SOLUTION
+Step 1: Verify the deployment exists and check current replicas
+bash
+kubectl get deployment blue-app-t2q5
+Expected output (before change):
+
+text
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+blue-app-t2q5   1/1     1            1           ...
+Step 2: Scale the deployment from 1 to 3 replicas
+Use kubectl scale:
+
+bash
+kubectl scale deployment blue-app-t2q5 --replicas=3
+Expected output:
+
+text
+deployment.apps/blue-app-t2q5 scaled
+Alternative approaches
+Option A — kubectl edit (interactive):
+
+bash
+kubectl edit deployment blue-app-t2q5
+Then change spec.replicas: 1 → spec.replicas: 3 and save.
+
+Option B — patch:
+
+bash
+kubectl patch deployment blue-app-t2q5 -p '{"spec":{"replicas":3}}'
+Step 3: Verify the replicas count
+bash
+kubectl get deployment blue-app-t2q5
+Expected output:
+
+text
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+blue-app-t2q5   3/3     3            3           ...
+Also confirm the pods are running:
+
+bash
+kubectl get pods -l app=blue-app-t2q5
+(Adjust the label selector to match whatever label the deployment uses — you can check with kubectl get deployment blue-app-t2q5 -o yaml.)
+
+Or simply:
+
+bash
+kubectl get pods
+Expected: three pods with names like blue-app-t2q5-xxxxx-xxxxx in Running state.
+
+To double-check the replica count field directly:
+
+bash
+kubectl get deployment blue-app-t2q5 -o jsonpath='{.spec.replicas}'
+Expected output:
+
+text
+3
+Requirements checklist
+Requirement	Status
+Deployment blue-app-t2q5 exists	✅ Verified
+Pods are running	✅ Confirmed (3/3 available)
+Replicas count is 3	✅ Scaled from 1 → 3
+Notes
+kubectl scale is the quickest, non-destructive way to adjust replicas — it doesn't touch the pod template, only spec.replicas.
+
+If the change must be persistent in source control, update the deployment manifest's replicas: field and re-apply with kubectl apply -f <file>, otherwise a future apply from an older manifest could revert it back to 1.
+
+If pods don't reach Running (e.g., Pending due to insufficient cluster resources), check with kubectl describe pod <pod-name> and kubectl get events.
+
+If a Horizontal Pod Autoscaler (HPA) is attached to this deployment, it may override the manual replica count — check with kubectl get hpa
