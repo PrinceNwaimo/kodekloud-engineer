@@ -1,0 +1,86 @@
+An engineer was tasked with creating a Kubernetes Pod template for a specific application deployment within the Kubernetes cluster, and then creating the Pod using this template.
+
+
+The directive is to generate a template file named ecommerce-t1q2.yml within the /usr/ecommerce-t1q2/ directory on the jump-host. This template will facilitate the creation of a pod named ecommerce-nginx-t1q2, using the nginx image.
+
+The objective is to establish a template that streamlines the process of generating the designated pod within the Kubernetes cluster.
+
+Use the created template file to create the Pod in the Kubernetes cluster.
+
+Note: The kubectl utility on jump-host has been configured to work with the kubernetes cluster.
+
+Pod 'ecommerce-nginx-t1q2' exists
+
+Pod is utilising image 'nginx'
+
+Template '/usr/ecommerce-t1q2/ecommerce-t1q2.yml' exists
+Solution
+Step 1: Create the directory
+bash
+mkdir -p /usr/ecommerce-t1q2/
+Step 2: Create the Pod template file
+Create the file /usr/ecommerce-t1q2/ecommerce-t1q2.yml with the following content:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-nginx-t1q2
+  labels:
+    app: ecommerce-nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+You can create this file using a heredoc:
+
+bash
+cat <<'EOF' > /usr/ecommerce-t1q2/ecommerce-t1q2.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecommerce-nginx-t1q2
+  labels:
+    app: ecommerce-nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+EOF
+Step 3: Create the Pod using the template
+bash
+kubectl apply -f /usr/ecommerce-t1q2/ecommerce-t1q2.yml
+Or equivalently:
+
+bash
+kubectl create -f /usr/ecommerce-t1q2/ecommerce-t1q2.yml
+Step 4: Verify the Pod was created
+bash
+kubectl get pod ecommerce-nginx-t1q2
+Expected output (once running):
+
+text
+NAME                    READY   STATUS    RESTARTS   AGE
+ecommerce-nginx-t1q2    1/1     Running   0          10s
+Step 5: Confirm the image used
+bash
+kubectl get pod ecommerce-nginx-t1q2 -o jsonpath='{.spec.containers[0].image}'
+Expected output:
+
+text
+nginx
+Requirements checklist
+Requirement	Status
+Template file /usr/ecommerce-t1q2/ecommerce-t1q2.yml exists	✅ Created
+Pod ecommerce-nginx-t1q2 exists	✅ Created via template
+Pod uses image nginx	✅ Confirmed
+Notes
+If the pod already exists from a previous attempt, you may want to delete it first with kubectl delete pod ecommerce-nginx-t1q2 before reapplying, or use kubectl apply which handles updates gracefully.
+
+The containerPort: 80 is optional metadata — it doesn't expose the port outside the pod but documents the intended port. If you need external access, consider a Service or adding hostPort / using kubectl port-forward.
+
+To troubleshoot, use kubectl describe pod ecommerce-nginx-t1q2 and kubectl logs ecommerce-nginx-t1q2.
