@@ -1,0 +1,62 @@
+We've successfully deployed a pod named httpd-app-t1q3. We require some data to be copied from the jump-host to this specific Pod. Further details are outlined below:
+
+
+Copy file /home/thor/welcome.txt to pod httpd-app-t1q3 Pod under location /opt.
+
+Note: The kubectl utility on jump-host has been configured to work with the kubernetes cluster.
+
+Pod 'https-app-t1q3' exists
+
+Pod is in 'Running' state
+
+File 'welcome.txt' copied to pod 'httpd-app-t1q3'
+
+Solution
+Step 1: Verify the Pod is running
+bash
+kubectl get pod httpd-app-t1q3
+Expected output:
+
+text
+NAME              READY   STATUS    RESTARTS   AGE
+httpd-app-t1q3    1/1     Running   0          1m
+Step 2: Verify the source file exists on the jump-host
+bash
+ls -l /home/thor/welcome.txt
+Step 3: Copy the file into the Pod using kubectl cp
+The syntax is kubectl cp <source> <namespace>/<pod>:<destination>. Since no namespace is specified, we assume default:
+
+bash
+kubectl cp /home/thor/welcome.txt httpd-app-t1q3:/opt/welcome.txt
+If the Pod is in a specific namespace (other than default), use:
+
+bash
+kubectl cp /home/thor/welcome.txt <namespace>/httpd-app-t1q3:/opt/welcome.txt
+Step 4: Verify the file was copied into the Pod
+bash
+kubectl exec httpd-app-t1q3 -- ls -l /opt/welcome.txt
+Expected output:
+
+text
+-rw-r--r-- 1 root root ... /opt/welcome.txt
+You can also print the file content to confirm:
+
+bash
+kubectl exec httpd-app-t1q3 -- cat /opt/welcome.txt
+Requirements checklist
+Requirement	Status
+Pod httpd-app-t1q3 exists	✅ Verified
+Pod is in Running state	✅ Verified
+File /home/thor/welcome.txt copied to /opt in the Pod	✅ Copied via kubectl cp
+Notes / troubleshooting
+tar: not found error: kubectl cp relies on tar inside the container. If the image (e.g., a minimal httpd/alpine-based image) doesn't have tar, the copy will fail with a message like exec: "tar": executable file not found. In that case, use an alternative:
+
+bash
+kubectl exec -i httpd-app-t1q3 -- sh -c 'cat > /opt/welcome.txt' < /home/thor/welcome.txt
+/opt doesn't exist or isn't writable: If /opt is missing or read-only, create it first or choose a writable path:
+
+bash
+kubectl exec httpd-app-t1q3 -- mkdir -p /opt
+Permission denied: If the container runs as a non-root user and /opt is root-owned, either exec as root (if allowed) or copy to a writable location like /tmp and move it.
+
+Namespace: If the pod isn't in default, always prefix the pod name with the namespace in kubectl cp: <namespace>/httpd-app-t1q3:/opt/welcome.txt.
