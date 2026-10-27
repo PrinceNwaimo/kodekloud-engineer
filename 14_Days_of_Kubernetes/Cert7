@@ -1,0 +1,82 @@
+One of our junior DevOps team members encountered an issue while deploying a stack on the Kubernetes cluster. 
+The webserver-t4q1 pod, with the nginx-container and a sidecar container named sidecar-container, is failing to start and remains in an error state.
+
+Your task is to investigate and rectify the problem to ensure the successful running state of the webserver-t4q1 pod. 
+The nginx-container uses the nginx:latest image, while the sidecar-container utilizes the ubuntu:latest image. Ensure the webserver-t4q1 pod is running as expected and the application is accessible.
+
+Note: The kubectl utility on jump-host has been configured to work with the kubernetes cluster.
+
+Pod 'webserver-t4q1' exists
+
+'nginx-container' exists
+
+'sidecar-container' exists
+
+'nginx-container' is using 'nginx:latest' image
+
+Sidecar container is using 'ubuntu:latest' image
+
+Pod 'webserver-t4q1' is up and running
+
+Website is accessible
+
+SOLUTION
+The most likely issue is that the sidecar-container using the ubuntu:latest image lacks a long-running command, causing the container to exit immediately, which puts the Pod in a CrashLoopBackOff state. 
+The ubuntu image's default entrypoint is bash, and when running non-interactively it exits directly, triggering a restart by Kubernetes. You need to add a looping command to it so it stays running continuously.
+
+Troubleshooting Steps
+First, confirm the specific cause of the error:
+
+bash
+kubectl describe pod webserver-t4q1
+Look at the State and Last State of sidecar-container under Containers. If you see Exit Code: 0 or Error, and Events shows Back-off restarting failed container, it confirms the container is exiting due to the command ending.
+
+Fix Solution
+Since the Pod already exists and Pod's command field is immutable (cannot be modified directly), you need to delete and recreate it. Execute the following steps on the jump-host:
+
+1. Export the existing Pod configuration (for reference)
+
+bash
+kubectl get pod webserver-t4q1 -o yaml > /tmp/webserver-t4q1-old.yaml
+2. Create a corrected YAML file
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webserver-t4q1
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+  - name: sidecar-container
+    image: ubuntu:latest
+    command: ["sh", "-c", "while true; do sleep 30; done"]
+Save as webserver-t4q1-fixed.yaml.
+
+3. Delete the old Pod and recreate it
+
+bash
+kubectl delete pod webserver-t4q1
+kubectl apply -f webserver-t4q1-fixed.yaml
+4. Verify the status
+
+bash
+kubectl get pod webserver-t4q1
+Expected output (both containers ready):
+
+text
+NAME              READY   STATUS    RESTARTS   AGE
+webserver-t4q1    2/2     Running   0          10s
+5. Verify nginx accessibility
+
+bash
+kubectl exec webserver-t4q1 -c nginx-container -- curl -s localhost
+If it returns the nginx welcome page HTML, the application is accessible.
+
+Key Points
+The core of the fix is adding command: ["sh", "-c", "while true; do sleep 30; done"] to sidecar-container. 
+Its purpose is to keep the container in a "running" state without exiting, meeting the Running state requirement for the Pod. 
+If the sidecar actually needs to process nginx logs, you can replace the command with one that reads log files in a loop, but the current requirement only specifies "Pod is up and running", so a simple sleep loop is sufficient.
