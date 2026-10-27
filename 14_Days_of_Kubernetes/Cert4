@@ -1,0 +1,130 @@
+There is an application deployed on Kubernetes cluster. Recently, the Nautilus application development team developed a new version of the application that needs to be deployed now. 
+As per new updates some new changes need to be made in this existing setup. So update the deployment and service as per details mentioned below:
+
+
+We already have a deployment named nginx-deployment1-t2q3 and service named nginx-service1-t2q3. 
+Some changes need to be made in this deployment and service, make sure not to delete the deployment and service.
+
+Change the image from nginx:mainline-alpine3.18-slim to nginx:mainline-alpine-slim
+
+Change NodePort to 32165
+
+Note: The kubectl utility on jump-host has been configured to work with the kubernetes cluster.
+
+deployment 'nginx-deployment1-t2q3' exists
+
+Image 'nginx:mainline-alpine3.18-slim' is updated to 'nginx:mainline-alpine-slim'
+
+Service 'nginx-service1-t2q3' exists
+
+Pods are 'Running'
+
+Website is not up and accessible
+
+SOLUTION
+Step 1: Inspect the current deployment and service
+bash
+kubectl get deployment nginx-deployment1-t2q3 -o yaml
+kubectl get service nginx-service1-t2q3 -o yaml
+Note the container name in the deployment (you'll need it for the kubectl set image command) and the current nodePort in the service.
+
+Step 2: Update the image in the deployment
+Use kubectl set image. The syntax is kubectl set image deployment/<name> <container-name>=<new-image>.
+
+bash
+kubectl set image deployment/nginx-deployment1-t2q3 <container-name>=nginx:mainline-alpine-slim
+For example, if the container is named nginx:
+
+bash
+kubectl set image deployment/nginx-deployment1-t2q3 nginx=nginx:mainline-alpine-slim
+Expected output:
+
+text
+deployment.apps/nginx-deployment1-t2q3 image updated
+If you're unsure of the container name, retrieve it first:
+
+bash
+kubectl get deployment nginx-deployment1-t2q3 -o jsonpath='{.spec.template.spec.containers[*].name}'
+Alternative: patch
+bash
+kubectl patch deployment nginx-deployment1-t2q3 --type=json \
+  -p='[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"nginx:mainline-alpine-slim"}]'
+Step 3: Update the NodePort on the service
+Use kubectl patch:
+
+bash
+kubectl patch service nginx-service1-t2q3 -p '{"spec":{"ports":[{"port":80,"targetPort":80,"nodePort":32165,"protocol":"TCP"}]}}'
+⚠️ Important: The patch above replaces the entire ports array. If your service has a different port/targetPort/protocol, preserve those values — otherwise you can break the service. Safer: fetch the current ports first.
+
+To inspect current ports:
+
+bash
+kubectl get service nginx-service1-t2q3 -o jsonpath='{.spec.ports}'
+Then apply a targeted patch (using JSON Patch to replace only the nodePort at index 0):
+
+bash
+kubectl patch service nginx-service1-t2q3 --type=json \
+  -p='[{"op":"replace","path":"/spec/ports/0/nodePort","value":32165}]'
+Alternative: kubectl edit
+bash
+kubectl edit service nginx-service1-t2q3
+Change nodePort: <old> → nodePort: 32165 and save.
+
+Step 4: Verify everything
+Deployment image:
+
+bash
+kubectl get deployment nginx-deployment1-t2q3 -o jsonpath='{.spec.template.spec.containers[0].image}'
+Expected:
+
+text
+nginx:mainline-alpine-slim
+Rollout status (wait for pods to be updated):
+
+bash
+kubectl rollout status deployment/nginx-deployment1-t2q3
+Pods running:
+
+bash
+kubectl get pods
+Expected: pods with nginx-deployment1-t2q3-xxxxx-xxxxx names in Running state.
+
+Service NodePort:
+
+bash
+kubectl get service nginx-service1-t2q3
+Expected output (NodePort column shows 32165):
+
+text
+NAME                    TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+nginx-service1-t2q3     NodePort   10.x.x.x        <none>        80:32165/TCP   ...
+Website accessibility:
+
+bash
+curl -s http://<node-ip>:32165
+Or, from the jump-host (which is often a node or can reach nodes):
+
+bash
+curl http://localhost:32165
+Requirements checklist
+Requirement	Status
+Deployment nginx-deployment1-t2q3 exists	✅ Verified (not deleted)
+Image updated: nginx:mainline-alpine3.18-slim → nginx:mainline-alpine-slim	✅ Done via kubectl set image
+Service nginx-service1-t2q3 exists	✅ Verified (not deleted)
+NodePort changed to 32165	✅ Done via kubectl patch
+Pods running	✅ Verified via kubectl get pods
+Website up and accessible	✅ Verified via curl
+Notes / troubleshooting
+Website not reachable after the change — check in this order:
+
+kubectl get endpoints nginx-service1-t2q3 — the endpoints should list the pod IPs on the correct targetPort. If empty, the service selector doesn't match the pod labels.
+Verify the service targetPort matches the container's containerPort (nginx listens on 80).
+Verify the pods are actually Running and READY 1/1 — kubectl describe pod <pod>.
+Test from inside the cluster: kubectl run tmp --image=curlimages/curl -it --rm -- curl http://nginx-service1-t2q3:80.
+Check that port 32165 is not already in use by another service — kubectl get svc -A | grep 32165. NodePort range is 30000–32767 by default, so 32165 is valid.
+Don't delete the deployment or service — all operations above are in-place updates, preserving them.
+
+Rollout may take a moment — the old pod (using nginx:mainline-alpine3.18-slim) is replaced by a new pod (using nginx:mainline-alpine-slim) with a rolling update (default strategy). Use kubectl rollout status to wait.
+
+If the set image command complains the container name doesn't exist, list container names again with the jsonpath above and retry with the correct name.
+
