@@ -1,0 +1,64 @@
+The Nautilus DevOps team recently deployed an application on Kubernetes for testing purposes, the deployment name is httpd-deployment-t5q1. 
+Initially, it was intended to test specific features. However, there's a current need to expose this application to test the frontend.
+
+
+To achieve this, a service needs to be created. The service should be named httpd-service-t5q1 with a nodePort set to 30004.
+
+Service for 'httpd-deployment-t5q1' is named as 'httpd-service-t5q1'
+
+Service type is 'NodePort'
+
+Service 'httpd-service-t5q1' nodePort is '30004'
+
+Website is up and accessible
+
+SOLUTION
+To expose your httpd-deployment-t5q1 on the specified NodePort, you need to create a Service that selects the correct Pods and maps the port. Since the exact container port of your httpd deployment isn't specified, the examples below use port 80, which is the standard for httpd. You can adjust the targetPort if your container listens on a different port.
+
+Option 1: Create via YAML (Recommended)
+This method gives you precise control over the nodePort value. Save the following as httpd-service.yaml and apply it with kubectl apply -f httpd-service.yaml.
+
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-service-t5q1
+spec:
+  type: NodePort
+  selector:
+    app: httpd-deployment-t5q1  # Adjust this label if your deployment uses a different selector
+  ports:
+    - port: 80
+      targetPort: 80           # Change this if your container listens on a different port
+      nodePort: 30004
+Important Note on the Selector: The selector field must match the labels on the Pods created by your deployment. You can verify the correct label by running kubectl get deployment httpd-deployment-t5q1 -o jsonpath='{.spec.selector.matchLabels}'.
+
+Option 2: Create via kubectl expose and Patch
+You can create the Service imperatively and then patch it to set the specific NodePort.
+
+Expose the deployment (this creates a NodePort Service with a random port):
+
+bash
+kubectl expose deployment httpd-deployment-t5q1 --name=httpd-service-t5q1 --type=NodePort --port=80 --target-port=80
+Patch the Service to use port 30004:
+
+bash
+kubectl patch svc httpd-service-t5q1 -p '{"spec":{"ports":[{"port":80,"targetPort":80,"protocol":"TCP","nodePort":30004}]}}'
+Verification
+After creating the Service, verify that it is configured correctly and that the endpoints are populated (which confirms it is selecting the Pods):
+
+bash
+# Check the Service details
+kubectl describe svc httpd-service-t5q1
+Look for the NodePort (should be 30004) and the Endpoints field. If Endpoints is empty or shows <none>, your selector is incorrect.
+
+To test access, retrieve your node IP:
+
+bash
+kubectl get nodes -o wide
+Then, from your local machine (if the node is reachable), run:
+
+bash
+curl http://<NODE-IP>:30004
+Note: If you are using a local cluster like minikube or kind, you may need to run minikube service httpd-service-t5q1 or use a port-forward to access the service from your host, as Node IPs may not be directly routable .
+
