@@ -1,0 +1,334 @@
+We encountered an issue with our Nginx and PHP-FPM setup on the Kubernetes cluster this morning, which halted its functionality. 
+Investigate and rectify the issue:
+
+The pod name is nginx-phpfpm and configmap name is nginx-config. Identify and fix the problem.
+
+Once resolved, copy /home/thor/index.php file from the jump host to the nginx-container within the nginx document root. After this, you should be able to access the website using Website button on the top bar.
+
+Note: The kubectl utility on the jump-host has been configured to work with the Kubernetes cluster.
+
+SOLUTION
+The issue stems from a path mismatch between the Nginx configuration and the volume mount path in the nginx-container. The ConfigMap nginx-config likely sets the document root to /var/www/html, but the nginx-container is mounting the shared volume at the default Nginx path (e.g., /usr/share/nginx/html), causing Nginx to look in the wrong directory for the PHP file.
+
+🔧 Step 1: Fix the Volume Mount Path
+You need to edit the pod definition so the nginx-container mounts the shared volume at the correct location.
+
+Export the current pod configuration:
+
+bash
+kubectl get pod nginx-phpfpm -o yaml > nginx-phpfpm.yaml
+Edit the nginx-phpfpm.yaml file. Locate the volumeMounts section for the nginx-container and change the mountPath to match the path specified in the nginx-config ConfigMap (typically /var/www/html):
+
+yaml
+# Under the nginx-container spec:
+volumeMounts:
+- name: shared-files
+  mountPath: /var/www/html   # Change this to match the ConfigMap root
+Apply the change by recreating the pod:
+
+bash
+kubectl delete pod nginx-phpfpm
+kubectl apply -f nginx-phpfpm.yaml
+📂 Step 2: Copy the PHP File
+Once the pod is running again, copy the file from the jump host into the specific container.
+
+bash
+kubectl cp /home/thor/index.php nginx-phpfpm:/var/www/html/index.php -c nginx-container
+After this, the Nginx container should be able to serve the index.php file from the shared volume, and the website should be accessible.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{},"labels":{"app":"php-app"},"name":"nginx-phpfpm",">
+  creationTimestamp: "2026-10-27T07:55:09Z"
+  generation: 1
+  labels:
+    app: php-app
+  name: nginx-phpfpm
+  namespace: default
+  resourceVersion: "1466"
+  uid: fedd24e8-75c5-470d-b443-1caec732306d
+spec:
+  containers:
+  - image: php:7.2-fpm-alpine
+    imagePullPolicy: IfNotPresent
+    name: php-fpm-container
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /usr/share/nginx/html
+      name: shared-files
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-xv5xd
+      readOnly: true
+  - image: nginx:latest
+    imagePullPolicy: Always
+    name: nginx-container
+    resources: {}
+terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/www/html
+      name: shared-files
+    - mountPath: /etc/nginx/nginx.conf
+      name: nginx-config-volume
+      subPath: nginx.conf
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-xv5xd
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: jump-host
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists tolerationSeconds: 300
+  volumes:
+  - emptyDir: {}
+    name: shared-files
+  - configMap:
+      defaultMode: 420
+      name: nginx-config
+    name: nginx-config-volume
+  - name: kube-api-access-xv5xd
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2026-10-27T07:55:17Z"
+    observedGeneration: 1. Not all but what do I change
+Looking at your pod definition, I can see the exact problem now.
+
+The Problem
+The Nginx container mounts the shared volume at /var/www/html, but the Nginx config (from the nginx-config ConfigMap) is almost certainly pointing its root directive to /usr/share/nginx/html — the default Nginx document root. Meanwhile, the PHP-FPM container mounts the shared volume at /usr/share/nginx/html.
+
+So the shared emptyDir volume is mounted at:
+
+php-fpm-container → /usr/share/nginx/html
+
+nginx-container → /var/www/html
+
+These are two different paths on the same shared volume... which actually still works for sharing files, but the discrepancy is what's tripping you up. The standard fix for this lab is to make both containers mount at /var/www/html so they agree with the Nginx config's root directive, and then copy index.php there.
+
+You also have a YAML syntax error in your pasted file (terminationMessagePath is dedented under nginx-container) — likely just a copy-paste artifact, but worth fixing if it's in the real file.
+
+What to Change
+Change 1 — php-fpm-container volumeMount
+yaml
+# BEFORE
+    volumeMounts:
+    - mountPath: /usr/share/nginx/html
+      name: shared-files
+
+# AFTER
+    volumeMounts:
+    - mountPath: /var/www/html
+      name: shared-files
+Change 2 — nginx-container volumeMount
+Leave it as /var/www/html (it's already correct):
+
+yaml
+    volumeMounts:
+    - mountPath: /var/www/html
+      name: shared-files
+Change 3 — Fix indentation of terminationMessagePath
+Make sure this line is indented consistently with the other keys under nginx-container:
+
+yaml
+  - image: nginx:latest
+    imagePullPolicy: Always
+    name: nginx-container
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    ...
+Apply the Fix
+bash
+kubectl delete pod nginx-phpfpm
+kubectl apply -f nginx-phpfpm.yaml
+Wait for it to be Running:
+
+bash
+kubectl get pod nginx-phpfpm -w
+Copy the File
+bash
+kubectl cp /home/thor/index.php nginx-phpfpm:/var/www/html/index.php -c nginx-container
+⚠️ Heads-up on kubectl cp: kubectl cp writes into the container's filesystem via the container runtime, not through the shared volume. Since nginx-container has the emptyDir mounted at /var/www/html, copying to /var/www/html/index.php inside nginx-container does land on the shared volume — so php-fpm-container will see it too at /var/www/html/index.php. That's exactly what you want.
+
+Verify
+bash
+kubectl exec nginx-phpfpm -c nginx-container -- ls -l /var/www/html/
+kubectl exec nginx-phpfpm -c php-fpm-container -- ls -l /var/www/html/
+Both should show index.php. Then hit the Website button on the top bar — the PHP page should render.
+
+Quick Sanity Check on the ConfigMap (optional)
+Just to confirm the root path matches, peek at it:
+
+bash
+kubectl get configmap nginx-config -o yaml | grep -A2 root
+You should see something like root /var/www/html; — if it instead says /usr/share/nginx/html, then instead of changing the mounts you'd want to change the ConfigMap's root directive to /var/www/html. Either way, both containers must mount the shared volume at the same path that root points to.
+
+thor@jump-host ~$ kubectl apply -f nginx-phpfpm.yaml
+pod/nginx-phpfpm created
+thor@jump-host ~$ kubectl get pod nginx-phpfpm -w
+NAME           READY   STATUS    RESTARTS   AGE
+nginx-phpfpm   2/2     Running   0          22s
+^Cthor@jump-host ~kubectl cp /home/thor/index.php nginx-phpfpm:/var/www/html/index.php -c nginx-containerer
+thor@jump-host ~$ kubectl exec nginx-phpfpm -c nginx-container -- ls -l /var/www/html/
+kubectl exec nginx-phpfpm -c php-fpm-container -- ls -l /var/www/html/
+total 4
+-rw-r--r-- 1 1000 1000 19 Oct 27 08:10 index.php
+total 4
+-rw-r--r--    1 1000     1000            19 Oct 27 08:10 index.php
+thor@jump-host ~$ kubectl get configmap nginx-config -o yaml | grep -A2 root
+        root /var/www/html;
+        index  index.html index.htm index.php;
+        server_name _;
+--
+          fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+          fastcgi_pass 127.0.0.1:9000;
+        }
+--
+      {"apiVersion":"v1","data":{"nginx.conf":"events {\n}\nhttp {\n  server {\n    listen 8099 default_server;\n    listen [::]:8099 default_server;\n\n    # Set nginx to serve files from the shared volume!\n    root /var/www/html;\n    index  index.html index.htm index.php;\n    server_name _;\n    location / {\n      try_files $uri $uri/ =404;\n    }\n    location ~ \\.php$ {\n      include fastcgi_params;\n      fastcgi_param REQUEST_METHOD $request_method;\n      fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n      fastcgi_pass 127.0.0.1:9000;\n    }\n  }\n}\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"nginx-config","namespace":"default"}}
+  creationTimestamp: "2026-10-27T07:55:09Z"
+  name: nginx-config
+thor@jump-host ~$
+You're almost there — the file is in place and the config looks correct. But there's one remaining bug in the Nginx config that will prevent PHP from working.
+
+The Remaining Issue: fastcgi_pass 127.0.0.1:9000
+Look at this line in the ConfigMap:
+
+text
+fastcgi_pass 127.0.0.1:9000;
+This tells Nginx to connect to PHP-FPM on 127.0.0.1 (localhost). But Nginx and PHP-FPM are in two separate containers within the same pod — they share a network namespace (so localhost is shared between them via the pod IP)...
+
+Actually wait — let me be precise here. In Kubernetes, containers in the same pod do share the network namespace, so 127.0.0.1:9000 from the nginx-container will reach the php-fpm-container on port 9000. So this should work...
+
+However, there's a second problem: PHP-FPM by default listens on a Unix socket (/var/run/php-fpm.sock or similar), not on TCP port 9000. The php:7.2-fpm-alpine image's default www.conf listens on 127.0.0.1:9000 — so that part is actually fine out of the box.
+
+Let me re-check what's actually broken.
+
+Let's Actually Test It
+Try hitting the website and see what happens:
+
+bash
+kubectl exec nginx-phpfpm -c nginx-container -- curl -s http://localhost:8099/
+Or from the jump host (if you can reach the pod):
+
+bash
+kubectl get pod nginx-phpfpm -o wide   # get pod IP
+curl http://<pod-ip>:8099/
+You should also verify Nginx config is valid and PHP-FPM is actually listening:
+
+bash
+# Check nginx config is loaded correctly
+kubectl exec nginx-phpfpm -c nginx-container -- nginx -t
+
+# Check what PHP-FPM is listening on
+kubectl exec nginx-phpfpm -c php-fpm-container -- netstat -tlnp 2>/dev/null || \
+kubectl exec nginx-phpfpm -c php-fpm-container -- ss -tlnp
+
+# Check nginx error log
+kubectl exec nginx-phpfpm -c nginx-container -- cat /var/log/nginx/error.log
+What to Look For
+If curl returns the PHP output correctly → you're done, the task is complete. Just click the Website button.
+
+If you get a 502 Bad Gateway → PHP-FPM isn't reachable on 127.0.0.1:9000. That would mean PHP-FPM is listening on a Unix socket instead. Fix by either:
+
+Changing the ConfigMap's fastcgi_pass to unix:/var/run/php-fpm.sock; (matching PHP-FPM's socket), or
+
+Configuring PHP-FPM's www.conf to listen on 127.0.0.1:9000.
+
+If you get a 404 → the try_files in location / is fine, but your index.php should still be found. Check the file is really there (it is, per your ls).
+
+If you get the raw PHP source → Nginx isn't matching the .php location block. That would be odd given the config.
+
+My Suspicion
+Given your ls output shows index.php present in both containers at /var/www/html, and the ConfigMap correctly sets root /var/www/html and fastcgi_pass 127.0.0.1:9000, the setup should already work. Run the curl test above to confirm:
+
+bash
+kubectl exec nginx-phpfpm -c nginx-container -- curl -s http://127.0.0.1:8099/
+If that returns your PHP page's output (e.g., <?php echo "Hello"; ?> rendered as Hello), then you're finished — just click the Website button on the top bar and confirm. The ls output already proves both containers share the file correctly, and the ConfigMap grep shows the config is right.
+
+One small note: your terminal shows a typo in the kubectl cp line (-c nginx-containerer with a stray er), but since the subsequent ls shows index.php present in both containers, the copy clearly succeeded (the shell may have autocorrected or you re-ran it). So no action needed there.
+
+Run the curl check and let me know what it returns — that'll tell us definitively whether anything else needs fixing.
+
+<tr class="h"><th>PHP Quality Assurance Team</th></tr>
+<tr><td class="e">Ilia Alshanetsky, Joerg Behrens, Antony Dovgal, Stefan Esser, Moriyoshi Koizumi, Magnus Maatta, Sebastian Nohn, Derick Rethans, Melvyn Sopacua, Jani Taskinen, Pierre-Alain Joye, Dmitry Stogov, Felipe Pena, David Soria Parra, Stanislav Malyshev, Julien Pauli, Stephen Zarkos, Anatol Belski, Remi Collet, Ferenc Kovacs </td></tr>
+</table>
+<table>
+<tr class="h"><th colspan="2">Websites and Infrastructure team</th></tr>
+<tr><td class="e">PHP Websites Team </td><td class="v">Rasmus Lerdorf, Hannes Magnusson, Philip Olson, Lukas Kahwe Smith, Pierre-Alain Joye, Kalle Sommer Nielsen, Peter Cowburn, Adam Harvey, Ferenc Kovacs, Levi Morrison </td></tr>
+<tr><td class="e">Event Maintainers </td><td class="v">Damien Seguy, Daniel P. Brown </td></tr>
+<tr><td class="e">Network Infrastructure </td><td class="v">Daniel P. Brown </td></tr>
+<tr><td class="e">Windows Infrastructure </td><td class="v">Alex Schoenmaker </td></tr>
+</table>
+<h2>PHP License</h2>
+<table>
+<tr class="v"><td>
+<p>
+This program is free software; you can redistribute it and/or modify it under the terms of the PHP License as published by the PHP Group and included in the distribution in the file:  LICENSE
+</p>
+<p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+</p>
+<p>If you did not receive a copy of the PHP license, or have any questions about PHP licensing, please contact license@php.net.
+</p>
+</td></tr>
+</table>
+</div></body></html>
+That output is the rendered PHP credits page — which means everything is working end-to-end:
+
+✅ Nginx is serving from the correct document root (/var/www/html)
+
+✅ The .php location block is matching
+
+✅ fastcgi_pass 127.0.0.1:9000 is reaching PHP-FPM successfully (cross-container via shared pod network namespace)
+
+✅ PHP is executing and rendering HTML back through Nginx
+
+The /home/thor/index.php file you copied in is clearly a phpinfo()/credits page, and it's being executed properly rather than served as raw source or returning a 502.
+
+✅ Task Complete
+Nothing else to fix. The pod is 2/2 Running, both containers share the volume at /var/www/html, the ConfigMap's root directive matches, and PHP-FPM is reachable.
+
+Final step: Click the Website button on the top bar of the lab UI to confirm the site loads in the browser — it should show the same PHP info/credits page you just saw in curl.
+
+Summary of what fixed it
+Problem	Fix
+php-fpm-container mounted the shared volume at /usr/share/nginx/html while Nginx config's root was /var/www/html	Changed php-fpm-container's mountPath to /var/www/html so both containers agree
+index.php was missing from the shared volume	kubectl cp /home/thor/index.php nginx-phpfpm:/var/www/html/index.php -c nginx-container
+The fastcgi_pass 127.0.0.1:9000 line was fine all along — containers in the same pod share a network namespace, so localhost:9000 from Nginx reaches PHP-FPM directly. Good work getting it across the line. 👍
+
