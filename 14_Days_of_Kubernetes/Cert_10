@@ -1,0 +1,71 @@
+Upon investigating an issue with one of the applications on the Kubernetes cluster, the team discovered that the service was configured with an incorrect node port. 
+We need to update the service as follows:
+
+Update service-t5q3 service to use node port 30099.
+
+Service 'service-t5q3' nodePort is '30099'
+
+Website is up and accessible
+
+SOLUTION
+To update an existing Service's nodePort, you can't simply change it in place with kubectl patch on all Kubernetes versions (and even when it works, the old port may linger in some setups). 
+The most reliable approach is to patch it, but if that fails, delete and recreate. Here are both methods.
+
+First: Check the current Service
+bash
+kubectl get svc service-t5q3 -o yaml
+Note the existing ports block (port, targetPort, protocol) so you preserve them. NodePorts must be in the range 30000–32767 (default), and 30099 is valid.
+
+Option 1: Patch the Service (try this first)
+bash
+kubectl patch svc service-t5q3 -p '{"spec":{"ports":[{"port":80,"targetPort":80,"protocol":"TCP","nodePort":30099}]}}'
+Important: Replace port and targetPort with the values currently configured on service-t5q3 (from the kubectl get svc -o yaml output above). 
+If you patch with wrong port/targetPort values, you'll break routing to the Pods. If your Service has multiple ports, you must include all of them in the patch.
+
+Option 2: Delete and Recreate (most reliable)
+If patching errors out (some versions reject nodePort changes), recreate the Service:
+
+bash
+# Save current definition first
+kubectl get svc service-t5q3 -o yaml > service-t5q3-backup.yaml
+
+# Delete it
+kubectl delete svc service-t5q3
+Then apply the corrected manifest (adjust selector, port, and targetPort to match your app):
+
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-t5q3
+spec:
+  type: NodePort
+  selector:
+    app: <your-app-label>      # Must match the Pods' labels
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30099
+      protocol: TCP
+bash
+kubectl apply -f service-t5q3.yaml
+Verification
+bash
+# Confirm nodePort is 30099 and endpoints are populated
+kubectl describe svc service-t5q3
+Check that:
+
+Type: is NodePort
+
+NodePort: shows 30099
+
+Endpoints: lists Pod IPs (not <none> — if empty, your selector is wrong)
+
+Then test access:
+
+bash
+kubectl get nodes -o wide          # get node IP
+curl http://<NODE-IP>:30099
+For local clusters (minikube/kind), use minikube service service-t5q3 or a port-forward if node IPs aren't directly reachable.
+
+Quick troubleshooting: If the website isn't up after the change, the most common causes are (1) selector not matching Pod labels, (2) targetPort not matching the container's listening port, or (3) the old Service wasn't fully deleted before recreation — re-run kubectl describe svc service-t5q3 and check Endpoints.
