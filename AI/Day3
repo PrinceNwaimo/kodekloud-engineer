@@ -1,0 +1,116 @@
+The datacenter AI Development Team is exploring how artificial intelligence can improve code readability and maintainability by automatically generating meaningful comments. You are tasked with building a Python-based AI module that analyzes a code snippet and produces a clear, one-line comment or docstring describing its purpose.
+
+Inside /root/openaiproject/commenter.py, create an OpenAI client using the API key and base URL provided in /root/.bash_profile. Define a function generate_comment(code_snippet: str) -> str that constructs a parameterized prompt instructing the AI to generate a one-line comment explaining the provided code.
+
+After building the function, send the constructed prompt to the OpenAI chat model:
+
+model: gpt-5.6-luna
+messages: user → prompt
+max_tokens: 50
+temperature: 0.2
+Save the result in a variable named response and print the generated comment or docstring to the console.
+
+Use the following snippet for testing inside your script:
+
+def calculate_area(length, width):
+ return length * width
+
+
+Notes:
+
+Ensure you are working inside /root/openaiproject.
+
+api_key and base_url are stored in /root/.bash_profile.
+
+The function must be parameterized using the input snippet.
+
+The function must return the generated comment AND print it.
+
+Use hardcoded values for api_key and base_url when initializing the OpenAI client or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+Before running, create a virtual environment and install OpenAI:
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+You are allowed up to 10 OpenAI requests. Past this limit you may encounter a rate limiter error, so optimize your request usage.
+
+SOLUTION
+Here's the complete commenter.py file and the steps to run it.
+
+python
+# /root/openaiproject/commenter.py
+import os
+from openai import OpenAI
+
+# Initialize the client using credentials from /root/.bash_profile
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+
+def generate_comment(code_snippet: str) -> str:
+    """
+    Uses the OpenAI chat model to generate a one-line comment
+    explaining the purpose of the provided code snippet.
+    """
+    prompt = (
+        "You are an expert Python developer. Analyze the following code snippet "
+        "and generate a single, clear, one-line Python comment (or docstring) "
+        "that accurately describes its purpose. "
+        "Only return the comment itself, with no additional explanation.\n\n"
+        f"Code snippet:\n{code_snippet}"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=50,
+        temperature=0.2
+    )
+
+    comment = response.choices[0].message.content.strip()
+    print(comment)
+    return comment
+
+
+# Test snippet
+test_snippet = """def calculate_area(length, width):
+    return length * width"""
+
+if __name__ == "__main__":
+    generate_comment(test_snippet)
+Setup and Run
+bash
+# 1. Move into the project directory
+cd /root/openaiproject
+
+# 2. Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install the OpenAI library
+pip install openai
+
+# 4. Load credentials from .bash_profile (if not already exported in this shell)
+source /root/.bash_profile
+
+# 5. Run the script
+python commenter.py
+Key Points
+Client initialization: Uses os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_API_BASE"), which are populated from /root/.bash_profile.
+
+Parameterized function: generate_comment(code_snippet) builds a prompt that embeds the supplied snippet, so the function is reusable for any code.
+
+Model parameters: model="gpt-5.6-luna", messages=[{"role": "user", "content": prompt}], max_tokens=50, temperature=0.2 — exactly as specified.
+
+Return + print: The generated text is stripped of whitespace, printed to the console, and returned so the result can be reused programmatically.
+
+Single request: The script issues exactly one API call per run, keeping you well within the 10-request limit.
+
+Expected output is a single line similar to:
+
+text
+# Calculates the area of a rectangle by multiplying its length and width.
