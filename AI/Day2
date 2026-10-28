@@ -1,0 +1,90 @@
+The AI development team at Xfusion is tasked with building a role-play chatbot using OpenAI's API.
+
+Task Requirements:
+
+Navigate to the /root/openaiproject/chatbot.py directory.
+
+Create a client instance using api_key and base_url.
+
+Use openai model=gpt-5.6-luna
+
+Define a variable prompt with the following content:
+
+You are a friendly travel guide. Greet the user and ask where they want to go.
+
+Send this prompt to the OpenAI chat model and store the result in variable nameresponse.
+
+Extract and print the generated text reply from the response
+
+Run the file after installing OpenAI in a virtual environment.
+
+
+Notes:
+
+Ensure you are working inside /root/openaiproject.
+
+api_key&base_url are in /root/.bash_profile (typically OPENAI_API_KEY and OPENAI_API_BASE).
+
+Install OpenAI inside a venv before running the script.
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+Use temperature=0.7&max_tokens=100.
+
+Use hardcoded values for api_key&base_url when initializing the OpenAI client, or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+You are allowed a maximum of 10 requests. After this, you may encounter a rate limiter error. Therefore, use your requests judiciously.
+
+SOLUTION
+Here is the complete script for chatbot.py, created according to your requirements. It initializes the client with your environment variables, sends the travel guide prompt to the gpt-5.6-luna model, and prints the reply.
+
+python
+# /root/openaiproject/chatbot.py
+import os
+from openai import OpenAI
+
+# Initialize client with hardcoded environment variable lookups as requested
+# (Values should be present in /root/.bash_profile)
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+# Define the prompt
+prompt = "You are a friendly travel guide. Greet the user and ask where they want to go."
+
+# Send prompt to the model and store the result in 'response'
+response = client.chat.completions.create(
+    model="gpt-5.6-luna",
+    messages=[
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0.7,
+    max_tokens=100
+)
+
+# Extract and print the generated text reply
+print(response.choices[0].message.content)
+Setup and Execution Steps
+Run the following commands inside /root/openaiproject to set up the virtual environment, install the library, and execute the script:
+
+bash
+# 1. Navigate to the project directory
+cd /root/openaiproject
+
+# 2. Create and activate the virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install the OpenAI library
+pip install openai
+
+# 4. Run the script
+python chatbot.py
+Key Details:
+
+Model: The script uses gpt-5.6-luna, which is a valid model ID optimized for cost-sensitive workloads .
+
+Client: It utilizes os.environ.get to read OPENAI_API_KEY and OPENAI_API_BASE, which should already be configured in your .bash_profile .
+
+Response Extraction: The output is retrieved using response.choices[0].message.content, which is the standard method for accessing the generated text from a Chat Completions object .
