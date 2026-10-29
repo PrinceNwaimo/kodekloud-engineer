@@ -1,0 +1,91 @@
+The xfusion AI Development Team is now exploring how artificial intelligence can assist in improving productivity and communication by transforming lengthy text into clear, concise bullet points for faster understanding.
+
+You are tasked to build a Python-based AI module that converts a given paragraph into concise, easy-to-read bullet points.
+
+Inside /root/openaiproject/converter.py, create an OpenAI client using the api_key and base_url provided for this session. Then, define a function named convert_to_bullets(text: str) -> str that constructs a parameterized prompt asking the AI to convert the given paragraph into short, meaningful bullet points.
+
+After creating the function, send the constructed prompt to the OpenAI chat model with the following parameters:
+
+model: gpt-5.6-luna
+messages: user → prompt
+max_tokens: 150
+temperature: 0.1
+Store the result in a variable named response and print the bullet points to the console.
+
+Use this paragraph for conversion:
+
+Artificial Intelligence is transforming industries by automating tasks, improving decision-making, and enabling new innovations across healthcare, finance, and education.
+
+
+Notes:
+
+Function must accept one parameter: text.
+
+Use the provided OpenAI api_key and base_url from /root/.bash_profile.
+
+The prompt must be parameterized with the paragraph.
+
+Use hardcoded values for api_key&base_url when initializing the OpenAI client, or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+Before running converter.py, create and activate a virtual environment:
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+You are allowed a maximum of 10 API requests due to rate limits.
+
+SOLUTION
+
+
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+def convert_to_bullets(text: str) -> str:
+    prompt = f"Convert the following paragraph into short, meaningful bullet points:\n\n{text}"
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=150,
+        temperature=0.1
+    )
+    return response.choices[0].message.content
+
+response = convert_to_bullets(
+    "Artificial Intelligence is transforming industries by automating tasks, "
+    "improving decision-making, and enabling new innovations across healthcare, "
+    "finance, and education."
+)
+print(response)
+Run in a single shell session so the credentials from /root/.bash_profile are exported to the Python process:
+
+bash
+cd /root/openaiproject
+source /root/.bash_profile
+python3 -m venv venv && source venv/bin/activate && pip install openai
+python converter.py
+How this maps to each requirement:
+
+File location — /root/openaiproject/converter.py.
+
+Client — OpenAI(api_key=os.environ.get("OPENAI_API_KEY"), base_url=os.environ.get("OPENAI_API_BASE")), reading the credentials the session profile provides.
+
+convert_to_bullets(text: str) -> str — single parameter text, typed return str.
+
+Parameterized prompt — f"...{text}" embeds the paragraph into the instruction.
+
+API parameters — model="gpt-5.6-luna", messages=[{"role": "user", "content": prompt}], max_tokens=150, temperature=0.1.
+
+response variable + print — result stored in response, then print(response) outputs the bullets.
+
+Sanity check that the environment loaded correctly before the API call (saves one of your 10 requests if credentials are missing):
+
+bash
+source /root/.bash_profile && python3 -c "import os; print(os.environ.get('OPENAI_API_KEY') is not None, os.environ.get('OPENAI_API_BASE') is not None)"
+Both should print True. If they print False, the profile assigns the variables without export — add export to those lines in /root/.bash_profile, re-source it, and rerun.
+
+Expected output will be a short bulleted list (e.g. lines starting with - or •) covering: automation of tasks, improved decision-making, and innovations in healthcare, finance, and education.
+
