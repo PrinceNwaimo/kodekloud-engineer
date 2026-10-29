@@ -1,0 +1,136 @@
+The datacenter AI Development Team is now working on automating written communication tasks. As part of this initiative, you are required to build a Python-based AI Email Assistant that rewrites messages into polite and professional emails.
+
+Inside email_assistant.py, create an OpenAI client using the provided API key and base URL under /root/.bash_profile. Then, define a function named rewrite_email(text: str) -> str that constructs a parameterized prompt asking the AI to rewrite the given email text politely and professionally.
+
+After defining rewrite_email, send the constructed prompt to the OpenAI chat model with these parameters:
+
+model: gpt-5.6-luna
+messages: user → prompt
+max_tokens: 60
+temperature: 0.1
+Store the output in a variable named response and print the polite rewritten email to the console.
+
+Use the following email text for rewriting:
+
+hey send me that report asap
+
+
+Notes:
+
+Function should accept one parameter: text.
+
+Use the provided OpenAI API key and base_url under /root/.bash_profile.
+
+File email_assistant.py must be inside /root/openaiproject.
+
+Use hardcoded values for api_key and base_url when initializing the OpenAI client or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+Before running the script,use the following commands install OpenAI:
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+You are allowed a maximum of 10 requests before rate limiting may occur.
+
+
+SOLUTION
+
+I'll help you create the Python-based AI Email Assistant. Let me break down the steps:
+
+First, check the API key and base URL from /root/.bash_profile
+
+Create the project directory and file
+
+Set up the virtual environment and install OpenAI
+
+Run the script
+
+Step 1: Check the API credentials
+bash
+cat /root/.bash_profile | grep -i openai
+Step 2: Create the project directory and file
+bash
+mkdir -p /root/openaiproject
+Step 3: Create email_assistant.py
+python
+import os
+from openai import OpenAI
+
+# Read API key and base URL from environment variables
+api_key = os.environ.get('OPENAI_API_KEY')
+base_url = os.environ.get('OPENAI_API_BASE')
+
+# Create OpenAI client
+client = OpenAI(api_key=api_key, base_url=base_url)
+
+
+def rewrite_email(text: str) -> str:
+    """Constructs a parameterized prompt to rewrite an email politely and professionally."""
+    prompt = (
+        f"Rewrite the following email text politely and professionally, "
+        f"keeping the original intent but using courteous language:\n\n"
+        f"\"{text}\""
+    )
+    return prompt
+
+
+# Email text to rewrite
+email_text = "hey send me that report asap"
+
+# Build the prompt
+prompt = rewrite_email(email_text)
+
+# Send the prompt to the chat model
+response = client.chat.completions.create(
+    model="gpt-5.6-luna",
+    messages=[{"role": "user", "content": prompt}],
+    max_tokens=60,
+    temperature=0.1,
+)
+
+# Print the polite rewritten email
+print(response.choices[0].message.content)
+Step 4: Set up the environment and run
+bash
+cd /root/openaiproject
+source /root/.bash_profile
+python3 -m venv venv && source venv/bin/activate && pip install openai
+python email_assistant.py
+Important Notes
+The function rewrite_email accepts exactly one parameter text and returns the constructed prompt.
+
+Client initialization uses os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE'), so ensure /root/.bash_profile exports these and is sourced before running.
+
+Model: gpt-5.6-luna, max_tokens: 60, temperature: 0.1 — exactly as specified.
+
+The response variable stores the API output, and the rewritten email is printed to the console.
+
+If credentials aren't in env vars
+If /root/.bash_profile doesn't export them (e.g., just assigns OPENAI_API_KEY=sk-... without export), you can either add export to those lines or read the file in the script:
+
+python
+# Alternative: read directly from .bash_profile
+def load_creds(path="/root/.bash_profile"):
+    creds = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[len("export "):]
+            if "=" in line and not line.startswith("#"):
+                k, v = line.split("=", 1)
+                creds[k.strip()] = v.strip().strip('"').strip("'")
+    return creds
+
+creds = load_creds()
+api_key = os.environ.get('OPENAI_API_KEY') or creds.get('OPENAI_API_KEY')
+base_url = os.environ.get('OPENAI_API_BASE') or creds.get('OPENAI_API_BASE')
+Expected output would be a courteous rewrite such as:
+
+"Hello, could you please send me that report as soon as possible? Thank you."
+
+If you hit a rate limit, wait before re-running; you have a maximum of 10 requests.
+
+
+
+
+
