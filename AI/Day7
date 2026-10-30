@@ -1,0 +1,99 @@
+The xfusion AI Innovation Team is building a smart Resume Analyzer that automatically extracts the most relevant job keywords from candidate profiles.
+
+You are required to build a Python-based AI module that extracts exactly five comma-separated job-relevant keywords from a resume paragraph.
+
+Inside /root/openaiproject/resume_extractor.py, create an OpenAI client using the provided API key and base URL. Then define a function:
+
+extract_keywords(text: str) -> str
+
+This function must construct a parameterized prompt that asks the AI to extract exactly 5 comma-separated keywords from the provided resume text.
+
+Next, send the prompt to the OpenAI chat model using:
+
+model: gpt-5.6-luna
+messages: user → prompt
+max_tokens: 100
+temperature: 0
+Finally, print the extracted keywords.
+
+
+Notes:
+
+Function must be named extract_keywords.
+
+Use the OpenAI API key and base_url from /root/.bash_profile.
+
+The prompt MUST demand exactly five comma-separated keywords.
+
+Use hardcoded values for api_key and base_url when initializing the OpenAI client or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE')
+
+Before running the script, create & activate a virtual environment and install OpenAI.
+
+python3 -m venv venv&&source venv/bin/activate && pip install openai
+
+You will use the following resume text:
+Experienced DevOps engineer skilled in Python, Kubernetes, Docker, CI/CD pipelines, and cloud automation.
+You are allowed a maximum of 10 requests. After this, you may encounter a rate limiter error, so use your calls wisely.
+
+
+SOLUTION
+python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+def extract_keywords(text: str) -> str:
+    prompt = (
+        "Extract exactly 5 comma-separated job-relevant keywords from the "
+        f"following resume text. Respond with only the five keywords, "
+        f"comma-separated, nothing else:\n\n{text}"
+    )
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=100,
+        temperature=0
+    )
+    return response.choices[0].message.content
+
+response = extract_keywords(
+    "Experienced DevOps engineer skilled in Python, Kubernetes, Docker, "
+    "CI/CD pipelines, and cloud automation."
+)
+print(response)
+Run in a single shell session so the credentials from /root/.bash_profile reach the Python process:
+
+bash
+cd /root/openaiproject
+source /root/.bash_profile
+python3 -m venv venv && source venv/bin/activate && pip install openai
+python resume_extractor.py
+How this satisfies each requirement:
+
+File location — /root/openaiproject/resume_extractor.py.
+
+Client — OpenAI(api_key=os.environ.get("OPENAI_API_KEY"), base_url=os.environ.get("OPENAI_API_BASE")).
+
+extract_keywords(text: str) -> str — exact function name, one parameter, typed return.
+
+Parameterized prompt — the resume text is interpolated via {text} inside the f-string.
+
+Exactly 5 comma-separated keywords — the prompt explicitly states "exactly 5 comma-separated job-relevant keywords" and "only the five keywords, comma-separated, nothing else."
+
+API parameters — model="gpt-5.6-luna", messages=[{"role": "user", "content": prompt}], max_tokens=100, temperature=0.
+
+Print — result stored in response, then print(response) outputs the keywords.
+
+Optional pre-flight check to avoid burning one of your 10 requests if credentials didn't load:
+
+bash
+source /root/.bash_profile && python3 -c "import os; print(os.environ.get('OPENAI_API_KEY') is not None, os.environ.get('OPENAI_API_BASE') is not None)"
+Both must print True. If not, add export to those lines in /root/.bash_profile, re-source, and rerun.
+
+Expected output (one line): something like
+DevOps, Python, Kubernetes, Docker, CI/CD — exactly five comma-separated keywords drawn from the resume text.
+
