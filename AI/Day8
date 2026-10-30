@@ -1,0 +1,97 @@
+The devops AI Development Team is experimenting with how artificial intelligence can create expressive short poetry through automation. In this task, you are required to build a Python-based AI module that generates three-line haikus (5-7-5 syllable pattern) based on a given topic.
+
+Inside /root/openaiproject/haiku_generator.py, create an OpenAI client using the api_key and base_url provided for this session. Additionally, define a function named generate_haiku(topic: str) -> str. This function should construct a parameterized prompt that instructs the AI to generate a haiku about the specified topic, strictly following the 5-7-5 syllable structure.
+
+Then, send the parameterized prompt to the OpenAI chat model using:
+
+model: gpt-5.6-luna
+prompt: parameterized_prompt
+max_tokens: 200
+temperature: 0.0
+Store the output in a variable named response and print the generated haiku (three distinct lines). Use the topic:
+
+Topic: 'sky'
+
+
+Notes:
+
+Function should accept one parameter: topic.
+
+Use the provided OpenAI api_key and base_url under /root/.bash_profile.
+
+The prompt must be parameterized with the topic.
+
+Ensure you are working inside /root/openaiproject.
+
+Use hardcoded values for api_key and base_url when initializing the OpenAI client or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+Before running, create and activate a virtual environment and install OpenAI:
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+Final output should display three distinct lines (the haiku).
+
+You are allowed a maximum of 10 requests before hitting rate limits.
+
+SOLUTION
+python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+def generate_haiku(topic: str) -> str:
+    prompt = (
+        f"Generate a haiku about '{topic}'. "
+        "It must be exactly three lines following the 5-7-5 syllable structure "
+        "(5 syllables on line 1, 7 on line 2, 5 on line 3). "
+        "Output only the three lines, nothing else."
+    )
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=200,
+        temperature=0.0
+    )
+    return response.choices[0].message.content
+
+response = generate_haiku("sky")
+print(response)
+Run in one shell session so the credentials from /root/.bash_profile reach the Python process:
+
+bash
+cd /root/openaiproject
+source /root/.bash_profile
+python3 -m venv venv && source venv/bin/activate && pip install openai
+python haiku_generator.py
+How each requirement is met:
+
+File location — /root/openaiproject/haiku_generator.py.
+
+Client — OpenAI(api_key=os.environ.get("OPENAI_API_KEY"), base_url=os.environ.get("OPENAI_API_BASE")).
+
+generate_haiku(topic: str) -> str — exact name, single parameter topic, typed return.
+
+Parameterized prompt — topic interpolated via f"...'{topic}'..."; prompt explicitly demands the 5-7-5 syllable structure and three lines only.
+
+API parameters — model="gpt-5.6-luna", messages=[{"role": "user", "content": prompt}], max_tokens=200, temperature=0.0.
+
+response variable + print — output stored in response, then printed, preserving the three distinct lines.
+
+Optional pre-flight to avoid wasting one of 10 requests:
+
+bash
+source /root/.bash_profile && python3 -c "import os; print(os.environ.get('OPENAI_API_KEY') is not None, os.environ.get('OPENAI_API_BASE') is not None)"
+Both must print True; if not, add export to those lines in /root/.bash_profile, re-source, and rerun.
+
+Note: the spec says prompt: parameterized_prompt, but the OpenAI chat API has no prompt parameter — the prompt is delivered via the messages array as specified (user → prompt). The code above does exactly that.
+
+Expected output: three lines in 5-7-5 form, e.g.
+
+text
+Endless blue above
+Clouds drift softly through the light
+Sky hugs the bright sun
