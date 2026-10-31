@@ -1,0 +1,91 @@
+The xfusion AI Engineering Team is building an intelligent Summarization Assistant designed to transform lengthy or unclear developer-reported issues into concise, easy-to-understand one-line summaries. This helps improve clarity, reduce ambiguity, and make bug reports easier to analyze and reproduce.
+
+Inside /root/openaiproject/summarizer.py, create an OpenAI client using the api_key and base_url provided for this session. Additionally, create a function named summarize(text: str) -> str. This function should build a parameterized prompt that asks the AI to summarize the given paragraph into a single-line summary.
+
+Use the following paragraph for summarization:
+
+Artificial Intelligence enables machines to mimic human intelligence, performing tasks such as learning, problem-solving, and decision-making with increasing accuracy.
+
+Then send the previously defined prompt to the OpenAI chat model, save the result in a variable named response, and print the one-line summary to the console.
+
+Model requirements:
+
+model: gpt-5.6-luna
+messages: role=user, content=prompt
+max_tokens: 80
+temperature: 0.5
+
+Notes:
+
+Your work directory must be /root/openaiproject.
+
+OpenAI api_key and base_url are stored in /root/.bash_profile.
+
+Prompt must be parameterized with the input paragraph.
+
+Use hardcoded values for api_key and base_url when initializing the OpenAI client or read them from environment variables via os.environ.get('OPENAI_API_KEY') and os.environ.get('OPENAI_API_BASE').
+
+Before running, create and activate a virtual environment:
+
+python3 -m venv venv && source venv/bin/activate && pip install openai
+
+You are allowed a maximum of 10 requests. After this, you may encounter a rate limiter error, so use your calls wisely.
+
+SOLUTION
+
+python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url=os.environ.get("OPENAI_API_BASE")
+)
+
+def summarize(text: str) -> str:
+    prompt = f"Summarize the following paragraph into a single-line summary:\n\n{text}"
+    response = client.chat.completions.create(
+        model="gpt-5.6-luna",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=80,
+        temperature=0.5
+    )
+    return response.choices[0].message.content
+
+response = summarize(
+    "Artificial Intelligence enables machines to mimic human intelligence, "
+    "performing tasks such as learning, problem-solving, and decision-making "
+    "with increasing accuracy."
+)
+print(response)
+Run in one shell session so the credentials from /root/.bash_profile are exported to the Python process:
+
+bash
+cd /root/openaiproject
+source /root/.bash_profile
+python3 -m venv venv && source venv/bin/activate && pip install openai
+python summarizer.py
+How each requirement is satisfied:
+
+File location — /root/openaiproject/summarizer.py.
+
+Client — OpenAI(api_key=os.environ.get("OPENAI_API_KEY"), base_url=os.environ.get("OPENAI_API_BASE")).
+
+summarize(text: str) -> str — exact name, one parameter, typed return.
+
+Parameterized prompt — paragraph interpolated via f"...{text}", and the prompt explicitly asks for a "single-line summary."
+
+API parameters — model="gpt-5.6-luna", messages=[{"role": "user", "content": prompt}], max_tokens=80, temperature=0.5.
+
+response variable + print — result stored in response, then print(response) outputs the one-line summary.
+
+Optional pre-flight to conserve one of your 10 requests:
+
+bash
+source /root/.bash_profile && python3 -c "import os; print(os.environ.get('OPENAI_API_KEY') is not None, os.environ.get('OPENAI_API_BASE') is not None)"
+Both must print True. If not, add export to those lines in /root/.bash_profile, re-source, and rerun.
+
+Expected output: one line, e.g.
+AI enables machines to mimic human intelligence for tasks like learning, problem-solving, and decision-making with growing accuracy.
+
+
