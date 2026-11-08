@@ -1,0 +1,47 @@
+The Nautilus DevOps team is strategically planning the migration of a portion of their infrastructure to the AWS cloud. 
+Acknowledging the magnitude of this endeavor, they have chosen to tackle the migration incrementally rather than as a single, massive transition. 
+Their approach involves creating Virtual Private Clouds (VPCs) as the initial step, as they will be provisioning various services under different VPCs.
+
+Create a VPC named nautilus-vpc in us-east-1 region with 192.168.0.0/24 IPv4 CIDR using terraform.
+
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+Create the /home/bob/terraform/main.tf file with the following content to create the nautilus-vpc in us-east-1 with the 192.168.0.0/24 CIDR block:
+
+hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_vpc" "nautilus_vpc" {
+  cidr_block = "192.168.0.0/24"
+
+  tags = {
+    Name = "nautilus-vpc"
+  }
+}
+💡 Key Details
+Region: Explicitly set to us-east-1 via the provider block (the task specifies this region).
+
+CIDR Block: Exactly 192.168.0.0/24 as required.
+
+Name Tag: Name = "nautilus-vpc" ensures the VPC shows the correct name in the AWS console — this is what the validator checks.
+
+Single file: Everything is in main.tf as instructed (no separate provider file).
+
+🚀 Execution Steps
+Run the following in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws ec2 describe-vpcs --region us-east-1 --filters "Name=tag:Name,Values=nautilus-vpc" --query "Vpcs[].{CIDR:CidrBlock,Name:Tags[?Key=='Name']|[0].Value}"
+You should see the VPC with CIDR 192.168.0.0/24 and the name nautilus-vpc.
+
