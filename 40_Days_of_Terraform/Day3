@@ -1,0 +1,39 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. 
+To achieve this, they have segmented large tasks into smaller, more manageable units. 
+This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. 
+By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+
+Create a VPC named datacenter-vpc in region us-east-1 with any IPv4 CIDR block through terraform.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To create the VPC named datacenter-vpc in us-east-1 using Terraform, you will need to write a configuration block for the aws_vpc resource. Since the task specifies an IPv4 CIDR block, you can use a standard private range like 10.0.0.0/16 .
+
+Here is the content you should place in your /home/bob/terraform/main.tf file:
+
+hcl
+resource "aws_vpc" "datacenter_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "datacenter-vpc"
+  }
+}
+💡 Key Details
+Region: The task specifies us-east-1. In KodeKloud environments, the AWS provider is usually pre-configured for you, so you typically do not need to hardcode the provider block unless instructed otherwise.
+
+CIDR Block: You can choose any valid IPv4 CIDR block (e.g., 10.0.0.0/16 or 192.168.0.0/24) as the task allows "any IPv4 CIDR block".
+
+Name Tag: The Name tag inside the tags block is what ensures the VPC appears as datacenter-vpc in the AWS console .
+
+🚀 Execution Steps
+After creating the file, run the following commands in your terminal (inside /home/bob/terraform):
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
