@@ -1,0 +1,47 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. 
+To achieve this, they have segmented large tasks into smaller, more manageable units. 
+This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. 
+By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+
+For this task, allocate an Elastic IP address named xfusion-eip using Terraform.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To allocate an Elastic IP (EIP) address with the name xfusion-eip, use the aws_eip resource. Since the task doesn't specify a specific region, you can either omit the provider block (if the environment is pre-configured) or set a default region like us-east-1.
+
+Here is the content for your /home/bob/terraform/main.tf file:
+
+hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_eip" "xfusion_eip" {
+  tags = {
+    Name = "xfusion-eip"
+  }
+}
+💡 Key Details
+Resource: aws_eip is the Terraform resource used to allocate an Elastic IP address.
+
+Name Tag: The Name = "xfusion-eip" tag inside the tags block is what gives the EIP its name in the AWS console — this is what the validator checks.
+
+Region: us-east-1 is used as a default; adjust if your environment requires a different region.
+
+Modern syntax: In newer versions of the AWS provider, aws_eip no longer requires the vpc = true argument (it's VPC-based by default). If you're on an older provider version and get a deprecation warning, you can add vpc = true inside the resource block.
+
+🚀 Execution Steps
+Run the following in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws ec2 describe-addresses --region us-east-1 --filters "Name=tag:Name,Values=xfusion-eip" --query "Addresses[].{IP:PublicIp,Name:Tags[?Key=='Name']|[0].Value}"
+You should see the allocated Elastic IP with the name xfusion-eip.
