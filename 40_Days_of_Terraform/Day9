@@ -1,0 +1,64 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. 
+To achieve this, they have segmented large tasks into smaller, more manageable units. 
+This granular approach enables the team to execute the migration in gradual phases, ensuring smoother implementation and minimizing disruption to ongoing operations. 
+By breaking down the migration into smaller tasks, the Nautilus DevOps team can systematically progress through each stage, allowing for better control, risk mitigation, and optimization of resources throughout the migration process.
+
+For this task, create an AWS EBS volume using Terraform with the following requirements:
+
+Name of the volume should be devops-volume.
+
+Volume type must be gp3.
+
+Volume size must be 2 GiB.
+
+Ensure the volume is created in us-east-1.
+
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To create the EBS volume with the specified requirements, use the aws_ebs_volume resource. Here is the content for your /home/bob/terraform/main.tf file:
+
+hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_ebs_volume" "devops_volume" {
+  availability_zone = "us-east-1a"
+  size              = 2
+  type              = "gp3"
+
+  tags = {
+    Name = "devops-volume"
+  }
+}
+💡 Key Details
+Volume Type: gp3 as required.
+
+Size: 2 GiB.
+
+Name Tag: Name = "devops-volume" — this is what the validator checks.
+
+Availability Zone: EBS volumes are zonal, so an AZ must be specified. us-east-1a is used here (any AZ within us-east-1 works). If you need a specific AZ from the environment, adjust accordingly.
+
+Region: Set to us-east-1 via the provider block.
+
+🚀 Execution Steps
+Run the following in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws ec2 describe-volumes \
+  --region us-east-1 \
+  --filters "Name=tag:Name,Values=devops-volume" \
+  --query "Volumes[].{ID:VolumeId,Size:Size,Type:VolumeType,State:State,Name:Tags[?Key=='Name']|[0].Value}"
+You should see a volume with size 2, type gp3, and name devops-volume in the available state.
+
