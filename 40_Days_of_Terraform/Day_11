@@ -1,0 +1,189 @@
+The Nautilus DevOps team is setting up monitoring in their AWS account. As part of this, they need to create a CloudWatch alarm.
+
+Using Terraform, perform the following:
+
+Task Details:
+Create a CloudWatch alarm named nautilus-alarm.
+The alarm should monitor CPU utilization of an EC2 instance.
+Trigger the alarm when CPU utilization exceeds 80%.
+Set the evaluation period to 5 minutes.
+Use a single evaluation period.
+Ensure that the entire configuration is implemented using Terraform. The Terraform working directory is /home/bob/terraform. 
+Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To create the CloudWatch alarm, you will need to reference the EC2 instance. Since the task doesn't provide an instance ID, you'll need to look it up using a data source, then configure the alarm with the specified metrics.
+
+Here is the content for your /home/bob/terraform/main.tf file:
+
+hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+# Look up the existing EC2 instance (adjust the filter if your instance has a specific Name tag)
+data "aws_instance" "target_instance" {
+  filter {
+    name   = "tag:Name"
+    values = ["*"] # Replace with the actual Name tag if known, e.g., "nautilus-ec2"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "nautilus_alarm" {
+  alarm_name          = "nautilus-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Alarm when CPU utilization exceeds 80%"
+
+  dimensions = {
+    InstanceId = data.aws_instance.target_instance.id
+  }
+}
+💡 Key Details
+Finding the Instance: Since no instance ID is given, the data "aws_instance" block uses a filter to locate it. If the instance has a specific Name tag, replace "*" with that value. If your environment only has one instance, the filter might still work, but it's safer to specify the tag .
+
+Alarm Configuration: The alarm is set to trigger when CPUUtilization is GreaterThanThreshold 80% for 1 evaluation period of 300 seconds (5 minutes) .
+
+Namespace: For EC2 metrics, the namespace must be AWS/EC2 .
+
+🚀 Execution Steps
+Run the following in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+⚠️ Important Note
+If the data block returns multiple instances or none, Terraform will fail. You may need to adjust the filter to match the exact Name tag of your EC2 instance in the KodeKloud environment. If you know the instance ID, you can simplify the data block to just instance_id = "i-xxxxxxxx" .
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style = true
+
+endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+ This is the provider.tf given. I am expected to creat the main.tf
+Given that you're using LocalStack (the http://aws:4566 endpoints), you need to work with the resources available in your LocalStack environment. Since no EC2 instance ID is provided, you'll need to create an EC2 instance first (or look up an existing one) and then attach the alarm to it.
+
+Here is the main.tf that creates the EC2 instance and the CloudWatch alarm:
+
+hcl
+# Create an EC2 instance to monitor
+resource "aws_instance" "nautilus_instance" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "nautilus-ec2"
+  }
+}
+
+# Create the CloudWatch alarm for CPU utilization
+resource "aws_cloudwatch_metric_alarm" "nautilus_alarm" {
+  alarm_name          = "nautilus-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Alarm when CPU utilization exceeds 80%"
+
+  dimensions = {
+    InstanceId = aws_instance.nautilus_instance.id
+  }
+}
+💡 Key Details
+EC2 Instance: Since LocalStack doesn't have pre-existing instances, we create one to attach the alarm to. The AMI ami-0c101f26f147fa7fd is a common Amazon Linux 2 AMI used in KodeKloud labs .
+
+Alarm Name: nautilus-alarm as required.
+
+Metric: CPUUtilization from the AWS/EC2 namespace.
+
+Threshold: 80 with GreaterThanThreshold.
+
+Evaluation Periods: 1 (single evaluation period).
+
+Period: 300 seconds (5 minutes).
+
+Dimension: Ties the alarm to the specific EC2 instance.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+⚠️ If an EC2 Instance Already Exists
+If the environment already has an instance and you're not supposed to create one, replace the aws_instance resource with a data block:
+
+hcl
+data "aws_instance" "existing" {
+  filter {
+    name   = "tag:Name"
+    values = ["nautilus-ec2"] # adjust to match the actual tag
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "nautilus_alarm" {
+  alarm_name          = "nautilus-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Alarm when CPU utilization exceeds 80%"
+
+  dimensions = {
+    InstanceId = data.aws_instance.existing.id
+  }
+}
+Check what exists in LocalStack first with:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances
+Then use the appropriate approach.
+
