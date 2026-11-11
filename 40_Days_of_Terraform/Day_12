@@ -1,0 +1,73 @@
+As part of the data migration process, the Nautilus DevOps team is actively creating several S3 buckets on AWS. 
+They plan to utilize both private and public S3 buckets to store the relevant data. 
+Given the ongoing migration of other infrastructure to AWS, it is logical to consolidate data storage within the AWS environment as well.
+
+Create a public S3 bucket named devops-s3-591867430 using Terraform.
+
+Ensure the bucket is accessible publicly once created by setting the proper ACL.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Notes:
+
+Create the resources only in the us-east-1 region.
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+The name of the S3 bucket should be based on devops-s3-591867430.
+You can use the ACL settings to ensure the bucket is publicly accessible.
+
+SOLUTION
+
+To create a public S3 bucket in your LocalStack environment, you need to define the bucket and then explicitly disable the public access block settings that AWS enables by default. 
+The acl argument alone is not enough in modern Terraform; you must also configure aws_s3_bucket_public_access_block to allow public access.
+
+Here is the main.tf to accomplish this:
+
+hcl
+resource "aws_s3_bucket" "devops_bucket" {
+  bucket = "devops-s3-591867430"
+
+  tags = {
+    Name = "devops-s3-591867430"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "devops_bucket_public_access" {
+  bucket = aws_s3_bucket.devops_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_acl" "devops_bucket_acl" {
+  depends_on = [
+    aws_s3_bucket_public_access_block.devops_bucket_public_access,
+  ]
+
+  bucket = aws_s3_bucket.devops_bucket.id
+  acl    = "public-read"
+}
+💡 Key Details
+Bucket Name: Set exactly to devops-s3-591867430 as required.
+
+Public Access Block: The aws_s3_bucket_public_access_block resource is essential. 
+By setting all four flags to false, you disable the default security settings that would otherwise block the public ACL .
+
+ACL: The aws_s3_bucket_acl resource applies the public-read canned ACL. The depends_on ensures the public access block is configured first, preventing a race condition .
+
+Region: Your provider.tf already sets the region to us-east-1, so no extra configuration is needed here.
+
+🚀 Execution Steps
+Run the following in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+⚠️ Note on LocalStack Validation
+Some KodeKloud community posts mention that the task checker sometimes looks for the bucket in real AWS rather than LocalStack, causing false failures even when the bucket exists locally . If you encounter this, verify the bucket exists with:
+
+bash
+aws --endpoint-url=http://aws:4566 s3api head-bucket --bucket devops-s3-591867430
+If the bucket exists locally, the Terraform configuration is correct.
