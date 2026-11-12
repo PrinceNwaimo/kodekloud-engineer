@@ -1,0 +1,40 @@
+When establishing infrastructure on the AWS cloud, Identity and Access Management (IAM) is among the first and most critical services to configure. 
+IAM facilitates the creation and management of user accounts, groups, roles, policies, and other access controls. 
+The Nautilus DevOps team is currently in the process of configuring these resources and has outlined the following requirements:
+
+For this task, create an IAM user named iamuser_mark using terraform. 
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To create the IAM user iamuser_mark, here is your /home/bob/terraform/main.tf:
+
+hcl
+resource "aws_iam_user" "iamuser_mark" {
+  name = "iamuser_mark"
+
+  tags = {
+    Name = "iamuser_mark"
+  }
+}
+💡 Key Details
+Resource: aws_iam_user creates an IAM user.
+
+Name: Exactly iamuser_mark as required.
+
+Region: IAM is a global service, so no region-specific configuration is needed (your provider.tf already handles this).
+
+Name Tag: Added for clarity, though the validator primarily checks the name argument.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam get-user --user-name iamuser_mark
+You should see the user iamuser_mark returned with its ARN and creation date.
+
