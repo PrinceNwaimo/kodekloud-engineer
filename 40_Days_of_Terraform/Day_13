@@ -1,0 +1,66 @@
+As part of the data migration process, the Nautilus DevOps team is actively creating several S3 buckets on AWS using Terraform. 
+They plan to utilize both private and public S3 buckets to store the relevant data. 
+Given the ongoing migration of other infrastructure to AWS, it is logical to consolidate data storage within the AWS environment as well.
+
+Create an S3 bucket using Terraform with the following details:
+
+1) The name of the S3 bucket must be xfusion-s3-843418458.
+
+2) The S3 bucket must block all public access, making it a private bucket.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Notes:
+
+Use Terraform to provision the S3 bucket.
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+Ensure the resources are created in the us-east-1 region.
+The bucket must have block public access enabled to restrict any public access.
+
+SOLUTION
+To create the private S3 bucket with all public access blocked, here is your /home/bob/terraform/main.tf:
+
+hcl
+resource "aws_s3_bucket" "xfusion_bucket" {
+  bucket = "xfusion-s3-843418458"
+
+  tags = {
+    Name = "xfusion-s3-843418458"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "xfusion_bucket_block" {
+  bucket = aws_s3_bucket.xfusion_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+💡 Key Details
+Bucket Name: Exactly xfusion-s3-843418458 as required.
+
+Public Access Block: All four flags set to true:
+
+block_public_acls – blocks new public ACLs
+
+block_public_policy – blocks new public bucket policies
+
+ignore_public_acls – ignores any existing public ACLs
+
+restrict_public_buckets – restricts public bucket policies
+
+Region: Handled by your existing provider.tf (us-east-1), so no extra provider block is needed.
+
+No ACL resource: A private bucket doesn't need an ACL override — do not add aws_s3_bucket_acl with public-read.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 s3api get-public-access-block --bucket xfusion-s3-843418458
+You should see all four settings returned as true, confirming the bucket is fully private.
