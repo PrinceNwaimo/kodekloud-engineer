@@ -1,0 +1,36 @@
+The rose DevOps team has been creating a couple of services on AWS cloud. 
+They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. 
+Recently they came up with requirements mentioned below.
+
+Create an IAM group named iamgroup_rose using terraform.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To create the IAM group iamgroup_rose, here is your /home/bob/terraform/main.tf:
+
+hcl
+resource "aws_iam_group" "iamgroup_rose" {
+  name = "iamgroup_rose"
+}
+💡 Key Details
+Resource: aws_iam_group creates an IAM group.
+
+Name: Exactly iamgroup_rose as required.
+
+Region: IAM is a global service, so no region-specific configuration is needed (your provider.tf already handles this).
+
+No path or tags needed: The task only requires the group to be created with the specified name.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam get-group --group-name iamgroup_rose
+You should see the group iamgroup_rose returned with its ARN and path.
