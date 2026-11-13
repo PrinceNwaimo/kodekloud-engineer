@@ -1,0 +1,55 @@
+When establishing infrastructure on the AWS cloud, Identity and Access Management (IAM) is among the first and most critical services to configure. 
+IAM facilitates the creation and management of user accounts, groups, roles, policies, and other access controls. 
+The Nautilus DevOps team is currently in the process of configuring these resources and has outlined the following requirements.
+
+Create an IAM policy named iampolicy_yousuf in us-east-1 region using Terraform. 
+It must allow read-only access to the EC2 console, i.e., this policy must allow users to view all instances, AMIs, and snapshots in the Amazon EC2 console.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To create an IAM policy that grants read-only access to view EC2 instances, AMIs, and snapshots in the console, you will use the aws_iam_policy resource with a JSON policy document. The policy needs to allow the ec2:Describe* actions, which cover viewing these resources, as EC2 Describe actions do not support resource-level permissions and must use a wildcard resource .
+
+Here is the main.tf for your task:
+
+hcl
+resource "aws_iam_policy" "iampolicy_yousuf" {
+  name        = "iampolicy_yousuf"
+  description = "Read-only access to view EC2 instances, AMIs, and snapshots in the console"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:Describe*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+💡 Key Details
+Policy Name: Set exactly to iampolicy_yousuf as required.
+
+Policy Document: The jsonencode function is used to format the policy correctly, as recommended by the Terraform documentation .
+
+Actions: ec2:Describe* allows viewing all EC2 resources, including instances, AMIs, and snapshots. This is the standard way to provide read-only console access because Describe actions do not support granular resource-level permissions .
+
+Region: IAM is a global service, so the us-east-1 region is handled by your provider configuration.
+
+🚀 Execution Steps
+Run the following in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam get-policy --policy-arn $(terraform state show aws_iam_policy.iampolicy_yousuf.arn | cut -d'"' -f2)
+You should see the policy iampolicy_yousuf returned with the correct permissions.
+
