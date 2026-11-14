@@ -1,0 +1,40 @@
+The Nautilus DevOps team needs to set up an SNS topic for sending notifications. They need to create an SNS topic with the following specifications:
+
+1) The topic name should be xfusion-notifications.
+
+Use Terraform to create this SNS topic. The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+Here is your /home/bob/terraform/main.tf for the SNS topic:
+
+hcl
+resource "aws_sns_topic" "xfusion_notifications" {
+  name = "xfusion-notifications"
+}
+💡 Key Details
+Resource: aws_sns_topic creates an SNS topic.
+
+Name: Exactly xfusion-notifications as required.
+
+No tags: As with the Kinesis tasks, avoid adding a tags block to keep terraform plan clean in LocalStack.
+
+Region: Handled by your existing provider.tf (us-east-1), so no extra provider block is needed.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 sns list-topics
+You should see xfusion-notifications in the list of topics.
