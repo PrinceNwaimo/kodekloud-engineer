@@ -1,0 +1,108 @@
+The Nautilus DevOps team needs to create an AWS Kinesis data stream for real-time data processing. 
+This stream will be used to ingest and process large volumes of streaming data, which will then be consumed by various applications for analytics and real-time decision-making.
+
+The stream should be named datacenter-stream.
+
+Use Terraform to create this Kinesis stream.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note:
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+
+SOLUTION
+To create the Kinesis data stream datacenter-stream, here is your /home/bob/terraform/main.tf:
+
+hcl
+resource "aws_kinesis_stream" "datacenter_stream" {
+  name = "datacenter-stream"
+
+  tags = {
+    Name = "datacenter-stream"
+  }
+}
+💡 Key Details
+Resource: aws_kinesis_stream creates a Kinesis data stream.
+
+Name: Exactly datacenter-stream as required.
+
+Shard Count: Not specified in the task, so it's omitted. Terraform will use the provider's default behavior. If your provider version requires shard_count, you can add shard_count = 1.
+
+Region: Handled by your existing provider.tf (us-east-1), so no extra provider block is needed.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Ensure terraform plan Shows No Changes
+After applying, run:
+
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 kinesis describe-stream --stream-name datacenter-stream
+You should see the stream with status ACTIVE.
+
+⚠️ If shard_count Is Required
+Some provider versions require shard_count to be explicitly set. If terraform apply fails with a missing argument error, update the resource to:
+
+hcl
+resource "aws_kinesis_stream" "datacenter_stream" {
+  name        = "datacenter-stream"
+  shard_count = 1
+
+  tags = {
+    Name = "datacenter-stream"
+  }
+}
+Then run terraform apply --auto-approve again.
+
+Error: shard_count must be at least 1 when stream_mode is PROVISIONED
+│ 
+│   with aws_kinesis_stream.datacenter_stream,
+│   on main.tf line 1, in resource "aws_kinesis_stream" "datacenter_stream":
+│    1: resource "aws_kinesis_stream" "datacenter_stream" {
+The error confirms that shard_count is required when the stream mode defaults to PROVISIONED. Add shard_count = 1 to fix it. Here is the updated /home/bob/terraform/main.tf:
+
+hcl
+resource "aws_kinesis_stream" "datacenter_stream" {
+  name        = "datacenter-stream"
+  shard_count = 1
+
+  tags = {
+    Name = "datacenter-stream"
+  }
+}
+💡 Why This Fixes It
+The AWS provider defaults stream_mode to PROVISIONED.
+
+In PROVISIONED mode, shard_count is a required argument and must be at least 1.
+
+Setting shard_count = 1 satisfies the requirement.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 kinesis describe-stream --stream-name datacenter-stream
+You should see the stream with status ACTIVE and one shard.
+
