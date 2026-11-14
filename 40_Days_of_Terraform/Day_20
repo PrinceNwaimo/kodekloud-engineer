@@ -1,0 +1,66 @@
+The Nautilus DevOps team needs to create an SSM parameter in AWS with the following requirements:
+
+1) The name of the parameter should be xfusion-ssm-parameter.
+
+2) Set the parameter type to String.
+
+3) Set the parameter value to xfusion-value.
+
+4) The parameter should be created in the us-east-1 region.
+
+5) Ensure the parameter is successfully created using terraform and can be retrieved when the task is completed.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+  SOLUTION
+  Here is your /home/bob/terraform/main.tf for the SSM parameter:
+
+hcl
+resource "aws_ssm_parameter" "xfusion_ssm_parameter" {
+  name  = "xfusion-ssm-parameter"
+  type  = "String"
+  value = "xfusion-value"
+}
+💡 Key Details
+Resource: aws_ssm_parameter creates a Systems Manager Parameter Store entry.
+
+Name: Exactly xfusion-ssm-parameter as required.
+
+Type: String (not SecureString or StringList).
+
+Value: xfusion-value as required.
+
+Region: Handled by your existing provider.tf (us-east-1), so no extra provider block is needed.
+
+No tags: Avoid adding a tags block to keep terraform plan clean in LocalStack.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Parameter Can Be Retrieved
+bash
+aws --endpoint-url=http://aws:4566 ssm get-parameter --name xfusion-ssm-parameter
+You should see output like:
+
+json
+{
+  "Parameter": {
+    "Name": "xfusion-ssm-parameter",
+    "Type": "String",
+    "Value": "xfusion-value",
+    "Version": 1
+  }
+}
+This confirms the parameter was created successfully and can be retrieved.
+
