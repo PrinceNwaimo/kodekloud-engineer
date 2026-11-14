@@ -74,13 +74,9 @@ Error: shard_count must be at least 1 when stream_mode is PROVISIONED
 The error confirms that shard_count is required when the stream mode defaults to PROVISIONED. Add shard_count = 1 to fix it. Here is the updated /home/bob/terraform/main.tf:
 
 hcl
-resource "aws_kinesis_stream" "datacenter_stream" {
-  name        = "datacenter-stream"
+resource "aws_kinesis_stream" "devops_stream" {
+  name        = "devops-stream"
   shard_count = 1
-
-  tags = {
-    Name = "datacenter-stream"
-  }
 }
 💡 Why This Fixes It
 The AWS provider defaults stream_mode to PROVISIONED.
