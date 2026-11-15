@@ -1,0 +1,52 @@
+The Nautilus DevOps team needs to set up CloudWatch logging for their application. They need to create a CloudWatch log group and log stream with the following specifications:
+
+1) The log group name should be xfusion-log-group.
+
+2) The log stream name should be xfusion-log-stream.
+
+Use Terraform to create the CloudWatch log group and log stream. The Terraform working directory is /home/bob/terraform. 
+Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+Here is your /home/bob/terraform/main.tf for the CloudWatch log group and log stream:
+
+hcl
+resource "aws_cloudwatch_log_group" "xfusion_log_group" {
+  name = "xfusion-log-group"
+}
+
+resource "aws_cloudwatch_log_stream" "xfusion_log_stream" {
+  name           = "xfusion-log-stream"
+  log_group_name = aws_cloudwatch_log_group.xfusion_log_group.name
+}
+💡 Key Details
+Log Group: aws_cloudwatch_log_group with name xfusion-log-group.
+
+Log Stream: aws_cloudwatch_log_stream with name xfusion-log-stream.
+
+Dependency: The log stream references the log group's name via aws_cloudwatch_log_group.xfusion_log_group.name, so Terraform creates the group first, then the stream.
+
+Region: Handled by your existing provider.tf (us-east-1).
+
+No tags: Avoid adding a tags block to keep terraform plan clean in LocalStack.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 logs describe-log-groups --log-group-name-prefix xfusion-log-group
+aws --endpoint-url=http://aws:4566 logs describe-log-streams --log-group-name xfusion-log-group
+You should see the log group xfusion-log-group and the log stream xfusion-log-stream listed.
+
