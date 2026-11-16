@@ -1,0 +1,96 @@
+The Nautilus DevOps team needs to store sensitive data securely using AWS Secrets Manager. They need to create a secret with the following specifications:
+
+1) The secret name should be xfusion-secret.
+
+2) The secret value should contain a key-value pair with username: admin and password: Namin123.
+
+3) Use Terraform to create the secret in AWS Secrets Manager.
+
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+provider.tf
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style = true
+
+endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+Based on your existing provider.tf, this environment uses LocalStack with the secretsmanager endpoint already mapped to http://aws:4566. So the Terraform configuration just needs to create the secret using the standard aws_secretsmanager_secret and aws_secretsmanager_secret_version resources.
+
+main.tf
+Create or overwrite /home/bob/terraform/main.tf with the following:
+
+hcl
+resource "aws_secretsmanager_secret" "xfusion_secret" {
+  name = "xfusion-secret"
+}
+
+resource "aws_secretsmanager_secret_version" "xfusion_secret_version" {
+  secret_id = aws_secretsmanager_secret.xfusion_secret.id
+
+  secret_string = jsonencode({
+    username = "admin"
+    password = "Namin123"
+  })
+}
+Explanation
+aws_secretsmanager_secret: Creates the secret container with the required name xfusion-secret.
+
+aws_secretsmanager_secret_version: Stores the actual sensitive value. Using jsonencode ensures the secret is stored as a proper JSON key-value pair ({"username":"admin","password":"Namin123"}), which is the recommended format for Secrets Manager and allows consumers to parse individual keys .
+
+No recovery_window_in_days is specified; the default applies. If your lab requires immediate deletion on destroy, you could add recovery_window_in_days = 0, but it's not required for this task.
+
+Execution Steps
+cd /home/bob/terraform
+
+terraform init
+
+terraform plan — should show 2 resources to add.
+
+terraform apply -auto-approve
+
+terraform plan — should return "No changes. Your infrastructure matches the configuration."
+
+Optional Verification
+You can confirm the secret was created correctly with:
+
+bash
+aws --endpoint-url=http://aws:4566 secretsmanager get-secret-value --secret-id xfusion-secret
+The output should include the SecretString as {"username":"admin","password":"Namin123"}.
+
