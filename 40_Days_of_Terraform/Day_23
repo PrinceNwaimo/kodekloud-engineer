@@ -1,0 +1,124 @@
+The Nautilus DevOps team needs to set up an Amazon OpenSearch Service domain to store and search their application logs. The domain should have the following specification:
+
+1) The domain name should be datacenter-es.
+
+2) Use Terraform to create the OpenSearch domain. The Terraform working directory is /home/bob/terraform. 
+Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+
+Notes:
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+Before submitting the task, ensure that terraform plan returns No changes. Your infrastructure matches the configuration.
+
+The OpenSearch domain creation process may take several minutes. Please wait until the domain is fully created before submitting.
+
+SOLUTION
+provider.tf
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style = true
+
+endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+
+Based on the provider.tf you provided, your environment is using LocalStack (or a similar AWS emulator) instead of a real AWS cloud. The key clues are the endpoints block pointing to http://aws:4566 and the skip_credentials_validation settings.
+
+This changes how you should configure the OpenSearch domain resource. Here are the key adjustments and the updated main.tf:
+
+Key Adjustments for LocalStack
+Engine Version: LocalStack's OpenSearch emulation works best with Elasticsearch_7.10 (or OpenSearch versions if explicitly supported by your LocalStack version). Using a very new OpenSearch version like OpenSearch_2.11 might cause compatibility issues or timeouts in the emulator .
+
+Access Policies: While real AWS allows you to omit access_policies, LocalStack sometimes requires an explicit policy to successfully create the domain. It's safer to include a permissive policy for the test environment.
+
+Endpoint: Your provider maps the es endpoint to LocalStack. The aws_opensearch_domain resource will use this mapping automatically.
+
+Updated main.tf
+Replace the contents of /home/bob/terraform/main.tf with the following. This configuration is tailored to work with the LocalStack provider you have defined:
+
+hcl
+resource "aws_opensearch_domain" "datacenter_es" {
+  domain_name    = "datacenter-es"
+  engine_version = "Elasticsearch_7.10" # LocalStack often expects this version
+
+  cluster_config {
+    instance_type  = "t3.small.search"
+    instance_count = 1
+  }
+
+  ebs_options {
+    ebs_enabled = true
+    volume_size = 10
+    volume_type = "gp2"
+  }
+
+  # LocalStack sometimes requires an access policy to be explicitly defined
+  access_policies = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = "es:*"
+        Effect   = "Allow"
+        Resource = "*"
+        Principal = {
+          AWS = "*"
+        }
+      }
+    ]
+  })
+
+  # Optional tags for clarity
+  tags = {
+    Name        = "datacenter-es"
+    Environment = "dev"
+  }
+}
+Execution Steps
+Save the file.
+
+Run terraform init (if you haven't already).
+
+Run terraform apply -auto-approve.
+
+Wait for the creation process. LocalStack may take a moment to download or spin up the OpenSearch container in the background .
+
+Once apply completes, run terraform plan. It should return "No changes. Your infrastructure matches the configuration."
+
+If the plan still shows changes after the apply completes, check the LocalStack logs or the Terraform state to see if any computed attributes (like the endpoint) are being updated asynchronously.
+This is the providr.tf
