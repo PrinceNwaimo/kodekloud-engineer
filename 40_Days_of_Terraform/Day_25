@@ -1,0 +1,54 @@
+During the migration process, the Nautilus DevOps team created several EC2 instances in different regions. 
+They are currently in the process of identifying the correct resources and utilization and are making continuous changes to ensure optimal resource utilization. 
+Recently, they discovered that one of the EC2 instances was underutilized, prompting them to decide to change the instance type. 
+Please make sure the Status check is completed (if it's still in Initializing state) before making any changes to the instance.
+
+Change the instance type from t2.micro to t2.nano for xfusion-ec2 instance using terraform.
+
+Make sure the EC2 instance xfusion-ec2 is in running state after the change.
+
+The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to change the instance type.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To change the instance type of xfusion-ec2 from t2.micro to t2.nano, you need to modify the instance_type attribute in your existing main.tf file. Since you are using LocalStack (based on your provider.tf), the Terraform apply process will automatically handle the stop/start cycle required for this change.
+
+Updated main.tf
+Find the aws_instance resource for xfusion-ec2 in your main.tf and update the instance_type line. The configuration should look similar to this (keep your existing AMI, subnet, and security group values):
+
+hcl
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd" # Keep your existing AMI
+  instance_type = "t2.nano"               # Changed from t2.micro
+  subnet_id     = ""                      # Keep your existing value
+  vpc_security_group_ids = [
+    "sg-1a0391390d2b1259b"                # Keep your existing value
+  ]
+
+  tags = {
+    Name = "xfusion-ec2"
+  }
+}
+Verification Before Applying
+The task explicitly asks you to ensure the status check is completed before making changes. You can verify the current instance status using the AWS CLI against your LocalStack endpoint :
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instance-status --instance-ids <your-instance-id>
+Wait until the InstanceStatus and SystemStatus show as ok (not initializing).
+
+Execution Steps
+Navigate and Init: cd /home/bob/terraform and run terraform init (if not already done).
+
+Plan: Run terraform plan. You should see an in-place update showing instance_type = "t2.micro" -> "t2.nano" .
+
+Apply: Run terraform apply -auto-approve. Terraform will stop the instance, modify the type, and start it again.
+
+Verify State: After apply completes, confirm the instance is running with the new type:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances --instance-ids <your-instance-id> --query 'Reservations[0].Instances[0].{State:State.Name, Type:InstanceType}'
+The output should show "State": "running" and "Type": "t2.nano".
+
+Final Check: Run terraform plan again. It should return "No changes. Your infrastructure matches the configuration."
+
