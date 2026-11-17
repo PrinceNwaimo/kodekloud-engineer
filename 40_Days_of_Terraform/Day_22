@@ -1,0 +1,60 @@
+The Nautilus DevOps team is working on automating infrastructure deployment using AWS CloudFormation. 
+As part of this effort, they need to create a CloudFormation stack that provisions an S3 bucket with versioning enabled.
+
+Create a CloudFormation stack named xfusion-stack using Terraform. 
+This stack should contain an S3 bucket named xfusion-bucket-547186510 as a resource, and the bucket must have versioning enabled. 
+The Terraform working directory is /home/bob/terraform. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+Here is your /home/bob/terraform/main.tf to create the CloudFormation stack that provisions an S3 bucket with versioning enabled:
+
+hcl
+resource "aws_cloudformation_stack" "xfusion_stack" {
+  name = "xfusion-stack"
+
+  template_body = jsonencode({
+    AWSTemplateFormatVersion = "2010-09-09"
+    Resources = {
+      XfusionBucket = {
+        Type = "AWS::S3::Bucket"
+        Properties = {
+          BucketName = "xfusion-bucket-547186510"
+          VersioningConfiguration = {
+            Status = "Enabled"
+          }
+        }
+      }
+    }
+  })
+}
+💡 Key Details
+Stack Name: Exactly xfusion-stack as required.
+
+Template Body: Inline JSON template using jsonencode() . The template_body argument supports up to 51,200 bytes, which is more than enough for this single-resource template .
+
+S3 Bucket: Defined as an AWS::S3::Bucket resource with BucketName = "xfusion-bucket-547186510".
+
+Versioning: Enabled via VersioningConfiguration with Status = "Enabled" . This is the required property to turn on S3 versioning through CloudFormation.
+
+Region: Handled by your existing provider.tf (us-east-1).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 cloudformation describe-stacks --stack-name xfusion-stack
+aws --endpoint-url=http://aws:4566 s3api get-bucket-versioning --bucket xfusion-bucket-547186510
+The first command should show the stack status as CREATE_COMPLETE, and the second should return "Status": "Enabled", confirming versioning is active on the bucket.
