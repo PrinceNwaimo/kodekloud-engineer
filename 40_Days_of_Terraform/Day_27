@@ -1,0 +1,128 @@
+The Nautilus DevOps team has been creating a couple of services on AWS cloud. 
+They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. 
+Recently they came up with requirements mentioned below.
+
+An IAM user named iamuser_kirsty and a policy named iampolicy_kirsty already exists. 
+Use Terraform to attach the IAM policy iampolicy_kirsty to the IAM user iamuser_kirsty. 
+The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to attach the specified IAM policy to the IAM user.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+Since both the IAM user and the IAM policy already exist in your AWS account, you should use data sources to look them up by name. This allows Terraform to reference their ARNs without trying to create or manage them.
+
+Here is the updated /home/bob/terraform/main.tf:
+
+hcl
+# Look up the existing IAM user by name
+data "aws_iam_user" "iamuser_kirsty" {
+  user_name = "iamuser_kirsty"
+}
+
+# Look up the existing IAM policy by name
+data "aws_iam_policy" "iampolicy_kirsty" {
+  name = "iampolicy_kirsty"
+}
+
+# Attach the policy to the user
+resource "aws_iam_user_policy_attachment" "kirsty_attach" {
+  user       = data.aws_iam_user.iamuser_kirsty.user_name
+  policy_arn = data.aws_iam_policy.iampolicy_kirsty.arn
+}
+💡 Key Details
+Data Sources: data "aws_iam_user" and data "aws_iam_policy" look up the existing resources by their names, so Terraform doesn't attempt to create them.
+
+Attachment Resource: aws_iam_user_policy_attachment is the correct resource for attaching a managed policy to a single user. It avoids the exclusive-attachment warning that comes with aws_iam_policy_attachment.
+
+No Conflict: Using aws_iam_user_policy_attachment ensures you're only managing this specific attachment, not all attachments of the policy across the account.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam list-attached-user-policies --user-name iamuser_kirsty
+You should see iampolicy_kirsty listed in the attached policies for the user.
+
+# Create IAM user
+resource "aws_iam_user" "user" {
+  name = "iamuser_kirsty"
+
+  tags = {
+    Name = "iamuser_kirsty"
+  }
+}
+
+# Create IAM Policy
+resource "aws_iam_policy" "policy" {
+  name        = "iampolicy_kirsty"
+  description = "IAM policy allowing EC2 read actions for kirsty"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:Read*"]
+        Resource = "*"
+      }
+    ]
+  })
+} main.tf
+Since both the IAM user and the IAM policy are already defined as resources in your main.tf, you should reference them directly instead of using data sources. You just need to add the aws_iam_user_policy_attachment resource.
+
+Here is your updated /home/bob/terraform/main.tf:
+
+hcl
+# Create IAM user
+resource "aws_iam_user" "user" {
+  name = "iamuser_kirsty"
+
+  tags = {
+    Name = "iamuser_kirsty"
+  }
+}
+
+# Create IAM Policy
+resource "aws_iam_policy" "policy" {
+  name        = "iampolicy_kirsty"
+  description = "IAM policy allowing EC2 read actions for kirsty"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:Read*"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the policy to the user
+resource "aws_iam_user_policy_attachment" "kirsty_attach" {
+  user       = aws_iam_user.user.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+💡 Key Details
+Direct References: aws_iam_user.user.name and aws_iam_policy.policy.arn refer to the resources already defined in your file, creating a clean dependency chain.
+
+Attachment Resource: aws_iam_user_policy_attachment is the correct resource for attaching a managed policy to a single user. It avoids the exclusive-attachment warning that comes with aws_iam_policy_attachment.
+
+No Data Sources Needed: Since both resources are Terraform-managed in the same configuration, data lookups would be redundant.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam list-attached-user-policies --user-name iamuser_kirsty
+You should see iampolicy_kirsty listed in the attached policies for the user.
+
