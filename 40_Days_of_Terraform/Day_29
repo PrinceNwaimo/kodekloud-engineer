@@ -1,0 +1,49 @@
+The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their AWS account. 
+As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their AWS environment.
+
+A S3 bucket named datacenter-bck-785537686 already exists.
+
+1) Copy the contents of datacenter-bck-785537686 S3 bucket to /opt/s3-backup/ directory on terraform-client host (the landing host once you load this lab).
+
+2) Delete the S3 bucket datacenter-bck-785537686.
+
+3) Use the AWS CLI through Terraform to accomplish this task—for example, by running AWS CLI commands within Terraform. 
+The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To accomplish this cleanup task, you can use Terraform's null_resource with a local-exec provisioner to run AWS CLI commands directly on the host where Terraform is executed. This allows you to both back up the bucket's contents and delete the bucket itself during the terraform apply phase.
+
+Here is the main.tf file you need:
+
+hcl
+resource "null_resource" "s3_cleanup" {
+  provisioner "local-exec" {
+    command = <<EOT
+      mkdir -p /opt/s3-backup/
+      aws s3 cp s3://datacenter-bck-785537686 /opt/s3-backup/ --recursive
+      aws s3 rm s3://datacenter-bck-785537686 --recursive
+      aws s3api delete-bucket --bucket datacenter-bck-785537686 --region us-east-1
+    EOT
+  }
+}
+💡 How This Works
+null_resource: This is a Terraform resource that doesn't manage any real infrastructure but serves as a trigger to run provisioners.
+
+local-exec Provisioner: This runs commands on the machine where Terraform is running (the terraform-client host), which is exactly where you need the files copied.
+
+Command Sequence:
+
+mkdir -p /opt/s3-backup/ ensures the target directory exists.
+aws s3 cp ... --recursive copies all objects from the S3 bucket to the local directory.
+aws s3 rm ... --recursive removes all objects from the bucket (a bucket must be empty before it can be deleted).
+aws s3api delete-bucket ... deletes the now-empty S3 bucket.
+🚀 Execution Steps
+Run the following commands in the terminal inside /home/bob/terraform:
+
+bash
+terraform init
+terraform apply --auto-approve
+The terraform apply command will execute the AWS CLI commands, performing the backup and deletion in one go.
+
