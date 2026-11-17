@@ -1,0 +1,128 @@
+The Nautilus DevOps team has been creating a couple of services on AWS cloud. 
+They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. 
+Recently they came up with requirements mentioned below.
+
+There is an instance named devops-ec2 and an elastic-ip named devops-ec2-eip in us-east-1 region. 
+Attach the devops-ec2-eip elastic-ip to the devops-ec2 instance using Terraform only.
+The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to attach the specified Elastic IP to the instance.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To attach an existing Elastic IP to an existing EC2 instance using Terraform, you need to use data sources to look up both resources by their names, and then use the aws_eip_association resource to link them.
+
+Here is the main.tf for your task:
+
+hcl
+# Look up the existing EC2 instance by its Name tag
+data "aws_instance" "devops_ec2" {
+  filter {
+    name   = "tag:Name"
+    values = ["devops-ec2"]
+  }
+}
+
+# Look up the existing Elastic IP by its Name tag
+data "aws_eip" "devops_ec2_eip" {
+  filter {
+    name   = "tag:Name"
+    values = ["devops-ec2-eip"]
+  }
+}
+
+# Associate the Elastic IP with the EC2 instance
+resource "aws_eip_association" "devops_eip_assoc" {
+  instance_id   = data.aws_instance.devops_ec2.id
+  allocation_id = data.aws_eip.devops_ec2_eip.id
+}
+💡 Key Details
+Finding the Instance: The data "aws_instance" block filters by the Name tag devops-ec2 to retrieve the instance ID .
+
+Finding the Elastic IP: The data "aws_eip" block filters by the Name tag devops-ec2-eip to retrieve the allocation ID .
+
+Association: The aws_eip_association resource is specifically designed for associating pre-existing EIPs with instances, so it will not manage the lifecycle of the EIP itself—only the association .
+
+Region: Handled by your existing provider.tf (us-east-1).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-addresses --filters "Name=tag:Name,Values=devops-ec2-eip"
+You should see the InstanceId field populated with the ID of devops-ec2, confirming the association is active.
+
+# Provision EC2 instance
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  subnet_id     = "subnet-73ddd3a4e428dba9b"
+  vpc_security_group_ids = [
+    "sg-7303c98ed011a2475"
+  ]
+
+  tags = {
+    Name = "devops-ec2"
+  }
+}
+
+# Provision Elastic IP
+resource "aws_eip" "ec2_eip" {
+  tags = {
+    Name = "devops-ec2-eip"
+  }
+}
+existying main.tf
+Since the EC2 instance and Elastic IP are already defined as resources in your main.tf, you should reference them directly instead of using data sources. You just need to add the aws_eip_association resource.
+
+Here is your updated /home/bob/terraform/main.tf:
+
+hcl
+# Provision EC2 instance
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  subnet_id     = "subnet-73ddd3a4e428dba9b"
+  vpc_security_group_ids = [
+    "sg-7303c98ed011a2475"
+  ]
+
+  tags = {
+    Name = "devops-ec2"
+  }
+}
+
+# Provision Elastic IP
+resource "aws_eip" "ec2_eip" {
+  tags = {
+    Name = "devops-ec2-eip"
+  }
+}
+
+# Associate the Elastic IP with the EC2 instance
+resource "aws_eip_association" "ec2_eip_assoc" {
+  instance_id   = aws_instance.ec2.id
+  allocation_id = aws_eip.ec2_eip.id
+}
+💡 Key Details
+Direct References: aws_instance.ec2.id and aws_eip.ec2_eip.id refer to the resources already defined in your file, creating a clean dependency chain.
+
+Association Resource: aws_eip_association links the EIP to the instance without managing either resource's lifecycle.
+
+No Data Sources Needed: Since both resources are Terraform-managed in the same configuration, data lookups would be redundant and could fail.
+
+Region: Handled by your existing provider.tf (us-east-1).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-addresses --filters "Name=tag:Name,Values=devops-ec2-eip"
+You should see the InstanceId field populated with the ID of devops-ec2, confirming the association is active.
