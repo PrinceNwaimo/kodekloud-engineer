@@ -1,0 +1,177 @@
+During the migration process, several resources were created under the AWS account. 
+Some of these test resources are no longer needed at the moment, so we need to clean them up temporarily. One such instance is currently unused and should be deleted.
+
+1) Delete the ec2 instance named nautilus-ec2 present in us-east-1 region using terraform. 
+Make sure to keep the provisioning code, as we might need to provision this instance again later.
+
+2) Before submitting your task, make sure instance is in terminated state.
+
+The Terraform working directory is /home/bob/terraform.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To delete the nautilus-ec2 instance while keeping the Terraform provisioning code intact, use Terraform's targeted destroy. 
+This removes the real AWS resource and its state entry, but leaves the resource block in main.tf so you can re-provision it later.
+
+📋 Steps
+Check the resource address in your main.tf:
+
+bash
+cd /home/bob/terraform
+grep -n "nautilus-ec2" main.tf
+You'll see something like:
+
+hcl
+resource "aws_instance" "nautilus_ec2" {
+  ...
+  tags = {
+    Name = "nautilus-ec2"
+  }
+}
+Note the resource name (e.g., nautilus_ec2). If it's different, adjust the -target below.
+
+Destroy only that instance:
+
+bash
+terraform destroy -target=aws_instance.nautilus_ec2 -auto-approve
+Replace nautilus_ec2 with the actual resource name from your main.tf.
+
+Terraform will:
+
+Delete the EC2 instance in AWS.
+
+Remove it from the Terraform state.
+
+Keep the resource "aws_instance" ... block in main.tf untouched.
+
+Verify the instance is terminated:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=nautilus-ec2" \
+  --query "Reservations[].Instances[].State.Name"
+Expected output:
+
+text
+[
+    "terminated"
+]
+If the instance no longer appears at all (because it was fully removed), that also confirms deletion.
+
+Confirm the code is still present:
+
+bash
+grep -n "nautilus-ec2" main.tf
+The resource block should still be there.
+
+💡 Why This Approach
+terraform destroy -target=... deletes only the specified resource, not the whole configuration.
+
+The main.tf file is not modified, so the provisioning code remains for future use.
+
+The instance reaches the terminated state, satisfying the task requirement.
+
+⚠️ If the Resource Is Not in State
+If terraform destroy -target=... says the resource is not in state (e.g., it was created manually), you can instead:
+
+bash
+# Import it first, then destroy
+terraform import aws_instance.nautilus_ec2 <instance-id>
+terraform destroy -target=aws_instance.nautilus_ec2 -auto-approve
+Or terminate it via AWS CLI while keeping the code:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 terminate-instances --instance-ids <instance-id>
+But the targeted terraform destroy is the cleanest Terraform-native way to meet the task.
+
+# Provision EC2 instance
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  vpc_security_group_ids = [
+    "sg-ab7fed86782a2fa3c"
+  ]
+
+  tags = {
+    Name = "nautilus-ec2"
+  }
+} This is the main.tf
+The user has a main.tf with an EC2 instance named ec2 (resource name) with the tag nautilus-ec2. They need to delete the instance using terraform but keep the provisioning code.
+
+The correct command is:
+
+bash
+terraform destroy -target=aws_instance.ec2 -auto-approve
+Since the resource is named ec2 in the resource block resource "aws_instance" "ec2", the target would be aws_instance.ec2.
+
+Then verify the instance is terminated.
+
+However, there's a subtlety: after terraform destroy -target=aws_instance.ec2, the state will no longer have the instance, but the main.tf still has the code.
+The task says "Make sure to keep the provisioning code" - this is satisfied since we don't modify main.tf.
+
+But wait - the task says "Delete the ec2 instance named nautilus-ec2 present in us-east-1 region using terraform." So using terraform destroy -target is the right approach.
+
+Also need to check: the provider is configured for LocalStack (http://aws:4566). So the AWS CLI verification should use the endpoint URL.
+
+Let me provide the answer.
+
+Since your main.tf defines the instance with the resource name ec2 (i.e., resource "aws_instance" "ec2"), the correct target address is aws_instance.ec2.
+
+📋 Steps
+1. Destroy only the EC2 instance (keeps the code in main.tf):
+
+bash
+cd /home/bob/terraform
+terraform destroy -target=aws_instance.ec2 -auto-approve
+This will:
+
+Delete the nautilus-ec2 instance in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_instance" "ec2" { ... } block in main.tf untouched, so you can re-provision it later.
+
+2. Verify the instance is in terminated state:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=nautilus-ec2" \
+  --query "Reservations[].Instances[].State.Name"
+Expected output:
+
+json
+[
+    "terminated"
+]
+If the instance is fully removed from LocalStack, the query returns an empty list — that also confirms deletion.
+
+3. Confirm the provisioning code is still present:
+
+bash
+grep -n "nautilus-ec2" main.tf
+You should still see your original resource "aws_instance" "ec2" block.
+
+💡 Why -target and Not terraform destroy
+Command	Effect
+terraform destroy -target=aws_instance.ec2	Deletes only the instance; main.tf is unchanged ✅
+terraform destroy	Destroys all resources and may prompt you to delete the config ❌
+Deleting the block from main.tf	Removes the provisioning code ❌
+The task explicitly requires you to keep the provisioning code, so targeted destroy is the correct approach.
+
+⚠️ If Terraform Says the Resource Is Not in State
+If the instance exists in AWS but isn't tracked by Terraform (e.g., created outside this config), import it first:
+
+bash
+# Get the instance ID
+INSTANCE_ID=$(aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=nautilus-ec2" \
+  --query "Reservations[].Instances[].InstanceId" --output text)
+
+# Import into state, then destroy
+terraform import aws_instance.ec2 $INSTANCE_ID
+terraform destroy -target=aws_instance.ec2 -auto-approve
+✅ Final Check Before Submitting
+bash
+terraform state list
+aws_instance.ec2 should not appear in the list (it's been removed from state), while main.tf still contains the resource block. This satisfies both requirements: the instance is deleted, and the provisioning code is preserved.
