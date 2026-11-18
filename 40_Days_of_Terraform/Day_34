@@ -1,0 +1,74 @@
+The Nautilus DevOps team is presently immersed in data migrations, transferring data from on-premise storage systems to AWS S3 buckets. 
+They have recently received some data that they intend to copy to one of the S3 buckets.
+
+S3 bucket named datacenter-cp-828356713 already exists. Copy the file /tmp/datacenter.txt to s3 bucket datacenter-cp-828356713 using Terraform. 
+The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to accomplish this task.
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+Main.tf
+resource "aws_s3_bucket" "my_bucket" {
+  bucket = "datacenter-cp-828356713"
+  acl    = "private"
+
+  tags = {
+    Name        = "datacenter-cp-828356713"
+  }
+}
+SOLUTION
+Here is your updated /home/bob/terraform/main.tf to copy /tmp/datacenter.txt into the existing S3 bucket:
+
+hcl
+resource "aws_s3_bucket" "my_bucket" {
+  bucket = "datacenter-cp-828356713"
+
+  tags = {
+    Name = "datacenter-cp-828356713"
+  }
+}
+
+resource "aws_s3_object" "datacenter_file" {
+  bucket = aws_s3_bucket.my_bucket.id
+  key    = "datacenter.txt"
+  source = "/tmp/datacenter.txt"
+  etag   = filemd5("/tmp/datacenter.txt")
+}
+💡 Key Details
+aws_s3_object: This is the resource used to upload a local file to S3. The source argument points to the local file path.
+
+key: The object name inside the bucket. Setting it to datacenter.txt uploads the file with that name.
+
+etag = filemd5(...): Ensures Terraform detects changes if the local file is modified, and re-uploads when needed.
+
+Removed acl = "private": This argument is not supported in AWS provider v5 (which your provider.tf uses). Buckets are private by default, so no ACL is needed.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 s3 ls s3://datacenter-cp-828356713/
+You should see:
+
+text
+2026-11-18 12:00:00        <size> datacenter.txt
+You can also confirm the content matches:
+
+bash
+aws --endpoint-url=http://aws:4566 s3 cp s3://datacenter-cp-828356713/datacenter.txt - | diff - /tmp/datacenter.txt && echo "File matches"
+⚠️ If the Bucket Is Not in Terraform State
+If terraform apply tries to recreate the bucket (because it exists in AWS but not in Terraform state), import it first:
+
+bash
+terraform import aws_s3_bucket.my_bucket datacenter-cp-828356713
+Then run terraform apply again. This ensures Terraform manages the existing bucket instead of trying to create a duplicate.
+
+
