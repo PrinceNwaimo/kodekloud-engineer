@@ -1,0 +1,150 @@
+The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their AWS account. 
+  As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their AWS environment.
+
+Delete the IAM role named iamrole_kareem using Terraform. Make sure to keep the provisioning code, as we might need to provision this instance again later.
+
+The Terraform working directory is /home/bob/terraform.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+  To delete the IAM role iamrole_kareem while keeping the provisioning code in main.tf, use Terraform's targeted destroy. This removes the real resource from AWS and its state entry, but leaves the resource block untouched so you can re-provision it later.
+
+📋 Steps
+1. Check the resource address in your main.tf:
+
+bash
+cd /home/bob/terraform
+grep -n -A 5 "iamrole_kareem" main.tf
+You'll see something like:
+
+hcl
+resource "aws_iam_role" "this" {
+  name = "iamrole_kareem"
+  ...
+}
+Note the resource name after aws_iam_role (e.g., this, role, iamrole_kareem). Use that in the next step.
+
+2. Destroy only that IAM role (replace this with your actual resource name):
+
+bash
+terraform destroy -target=aws_iam_role.this -auto-approve
+This will:
+
+Delete the IAM role iamrole_kareem in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_iam_role" ... block in main.tf untouched.
+
+3. Verify the role is deleted:
+
+bash
+aws --endpoint-url=http://aws:4566 iam get-role --role-name iamrole_kareem
+Expected output:
+
+text
+An error occurred (NoSuchEntity) when calling the GetRole operation: The role with name iamrole_kareem cannot be found.
+4. Confirm the provisioning code is still present:
+
+bash
+grep -n "iamrole_kareem" main.tf
+The resource block should still be there.
+
+5. Confirm the resource is no longer in state:
+
+bash
+terraform state list
+aws_iam_role.<name> should not appear in the list.
+
+⚠️ If the Role Has Attached Policies
+IAM roles often have policies attached (e.g., aws_iam_role_policy_attachment or aws_iam_role_policy). If the destroy fails because of these, target-destroy the attachments first:
+
+bash
+# Check what's attached in your main.tf
+grep -n "iamrole_kareem" main.tf
+
+# Then destroy attachments first, e.g.:
+terraform destroy -target=aws_iam_role_policy_attachment.<name> -auto-approve
+terraform destroy -target=aws_iam_role.this -auto-approve
+💡 Why -target and Not terraform destroy
+Command	Effect
+terraform destroy -target=aws_iam_role.this	Deletes only the role; main.tf is unchanged ✅
+terraform destroy	Destroys all resources ❌
+Deleting the block from main.tf	Removes the provisioning code ❌
+Once step 3 returns NoSuchEntity and step 4 shows the code is intact, the task is complete.
+
+resource "aws_iam_role" "role" {
+  name = "iamrole_kareem"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "iamrole_kareem"
+  }
+} main.tf
+The user has a main.tf with an aws_iam_role resource named "role". They want to delete it but keep the code. Since it's a bare role with no attached policies, a single targeted destroy should work.
+
+Since your resource is named role (i.e., resource "aws_iam_role" "role"), the correct target address is aws_iam_role.role. This role has no attached policies, so a single targeted destroy is all you need.
+
+📋 Steps
+1. Destroy only the IAM role (keeps the code in main.tf):
+
+bash
+cd /home/bob/terraform
+terraform destroy -target=aws_iam_role.role -auto-approve
+This will:
+
+Delete the IAM role iamrole_kareem in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_iam_role" "role" { ... } block in main.tf untouched, so you can re-provision it later.
+
+2. Verify the role is deleted:
+
+bash
+aws --endpoint-url=http://aws:4566 iam get-role --role-name iamrole_kareem
+Expected output:
+
+text
+An error occurred (NoSuchEntity) when calling the GetRole operation: The role with name iamrole_kareem cannot be found.
+3. Confirm the provisioning code is still present:
+
+bash
+grep -n "iamrole_kareem" main.tf
+You should still see your original block:
+
+hcl
+resource "aws_iam_role" "role" {
+  name = "iamrole_kareem"
+  ...
+}
+4. Confirm the resource is no longer in state:
+
+bash
+terraform state list
+aws_iam_role.role should not appear in the list.
+
+💡 Why -target=aws_iam_role.role
+Part	Meaning
+aws_iam_role	The resource type
+role	The resource name (the label after the type in your main.tf)
+The full address is always <type>.<name> — so in your case, aws_iam_role.role.
+
+⚠️ If the Destroy Fails
+Your role has only an assume_role_policy (the trust policy), which is inherent to the role and doesn't block deletion. Since there are no aws_iam_role_policy_attachment or aws_iam_role_policy resources in your main.tf, the single command above should succeed cleanly.
+
+Once step 2 returns NoSuchEntity and step 3 shows the code is intact, the task is complete.
+  
