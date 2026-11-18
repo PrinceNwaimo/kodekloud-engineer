@@ -1,0 +1,209 @@
+The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their AWS account. 
+As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their AWS environment.
+
+Delete an IAM group named iamgroup_ammar using terraform. Make sure to keep the provisioning code, as we might need to provision this instance again later.
+
+The Terraform working directory is /home/bob/terraform.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+📋 Steps
+1. Destroy only the EC2 instance (keeps the code in main.tf):
+
+bash
+cd /home/bob/terraform
+terraform destroy -target=aws_instance.ec2 -auto-approve
+This will:
+
+Delete the nautilus-ec2 instance in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_instance" "ec2" { ... } block in main.tf untouched, so you can re-provision it later.
+
+2. Verify the instance is in terminated state:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=nautilus-ec2" \
+  --query "Reservations[].Instances[].State.Name"
+Expected output:
+
+json
+[
+    "terminated"
+]
+If the instance is fully removed from LocalStack, the query returns an empty list — that also confirms deletion.
+
+3. Confirm the provisioning code is still present:
+
+bash
+grep -n "nautilus-ec2" main.tf
+You should still see your original resource "aws_instance" "ec2" block.
+
+💡 Why -target and Not terraform destroy
+Command	Effect
+terraform destroy -target=aws_instance.ec2	Deletes only the instance; main.tf is unchanged ✅
+terraform destroy	Destroys all resources and may prompt you to delete the config ❌
+Deleting the block from main.tf	Removes the provisioning code ❌
+The task explicitly requires you to keep the provisioning code, so targeted destroy is the correct approach.
+
+⚠️ If Terraform Says the Resource Is Not in State
+If the instance exists in AWS but isn't tracked by Terraform (e.g., created outside this config), import it first:
+
+bash
+# Get the instance ID
+INSTANCE_ID=$(aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=nautilus-ec2" \
+  --query "Reservations[].Instances[].InstanceId" --output text)
+
+# Import into state, then destroy
+terraform import aws_instance.ec2 $INSTANCE_ID
+terraform destroy -target=aws_instance.ec2 -auto-approve
+✅ Final Check Before Submitting
+bash
+terraform state list
+aws_instance.ec2 should not appear in the list (it's been removed from state), while main.tf still contains the resource block. This satisfies both requirements: the instance is deleted, and the provisioning code is preserved.
+
+The Nautilus DevOps team is currently engaged in a cleanup process, focusing on removing unnecessary data and services from their AWS account. As part of the migration process, several resources were created for one-time use only, necessitating a cleanup effort to optimize their AWS environment.
+
+Delete an IAM group named iamgroup_ammar using terraform. Make sure to keep the provisioning code, as we might need to provision this instance again later.
+
+The Terraform working directory is /home/bob/terraform.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+The user needs to delete an IAM group named iamgroup_ammar using Terraform, but keep the provisioning code in main.tf. The approach is to use terraform destroy -target=... on the resource.
+
+I need to check what the resource name likely is. Looking at previous similar tasks, the resource is typically named something like iamgroup_ammar or iam_group. But I should tell them to check main.tf first.
+
+Let me provide the steps.
+
+To delete the IAM group while keeping the provisioning code in main.tf, use Terraform's targeted destroy. This removes the real resource from AWS and its state entry, but leaves the resource block untouched so you can re-provision it later.
+
+📋 Steps
+1. Check the resource address in your main.tf:
+
+bash
+cd /home/bob/terraform
+grep -n -A 3 "iamgroup_ammar" main.tf
+You'll see something like:
+
+hcl
+resource "aws_iam_group" "iamgroup_ammar" {
+  name = "iamgroup_ammar"
+}
+Note the resource name after aws_iam_group (e.g., iamgroup_ammar, group, or similar). If it's different, adjust the -target below.
+
+2. Destroy only that IAM group:
+
+bash
+terraform destroy -target=aws_iam_group.iamgroup_ammar -auto-approve
+Replace iamgroup_ammar with the actual resource name from your main.tf.
+
+This will:
+
+Delete the IAM group iamgroup_ammar in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_iam_group" ... block in main.tf untouched.
+
+3. Verify the group is deleted:
+
+bash
+aws --endpoint-url=http://aws:4566 iam get-group --group-name iamgroup_ammar
+Expected output:
+
+text
+An error occurred (NoSuchEntity) when calling the GetGroup operation: The group with name iamgroup_ammar cannot be found.
+4. Confirm the provisioning code is still present:
+
+bash
+grep -n "iamgroup_ammar" main.tf
+The resource block should still be there.
+
+⚠️ If the Group Still Has Attached Policies
+If the IAM group has policies attached, terraform destroy -target may fail because the group must be empty before deletion. In that case, you'd need to also target-destroy the attachment resources first:
+
+bash
+terraform destroy -target=aws_iam_group_policy_attachment.<name> -auto-approve
+terraform destroy -target=aws_iam_group.iamgroup_ammar -auto-approve
+Check your main.tf for any aws_iam_group_policy_attachment or aws_iam_policy_attachment resources referencing the group.
+
+💡 Why -target and Not terraform destroy
+Command	Effect
+terraform destroy -target=aws_iam_group.iamgroup_ammar	Deletes only the group; main.tf is unchanged ✅
+terraform destroy	Destroys all resources ❌
+Deleting the block from main.tf	Removes the provisioning code ❌
+✅ Final Check Before Submitting
+bash
+terraform state list
+aws_iam_group.iamgroup_ammar should not appear in the list, while main.tf still contains the resource block. This satisfies both requirements.
+
+resource "aws_iam_group" "this" {
+  name = "iamgroup_ammar"
+} This is the name of the I am gorpu
+The user's main.tf has:
+
+hcl
+resource "aws_iam_group" "this" {
+  name = "iamgroup_ammar"
+}
+So the resource address is aws_iam_group.this. The target command should be:
+
+bash
+terraform destroy -target=aws_iam_group.this -auto-approve
+Let me give clear steps.
+
+Since your resource block is named this, the correct target address is aws_iam_group.this.
+
+📋 Steps
+1. Destroy only the IAM group (keeps the code in main.tf):
+
+bash
+cd /home/bob/terraform
+terraform destroy -target=aws_iam_group.this -auto-approve
+This will:
+
+Delete the IAM group iamgroup_ammar in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_iam_group" "this" { ... } block in main.tf untouched, so you can re-provision it later.
+
+2. Verify the group is deleted:
+
+bash
+aws --endpoint-url=http://aws:4566 iam get-group --group-name iamgroup_ammar
+Expected output:
+
+text
+An error occurred (NoSuchEntity) when calling the GetGroup operation: The group with name iamgroup_ammar cannot be found.
+3. Confirm the provisioning code is still present:
+
+bash
+grep -n "iamgroup_ammar" main.tf
+You should still see:
+
+hcl
+resource "aws_iam_group" "this" {
+  name = "iamgroup_ammar"
+}
+4. Confirm the resource is no longer in state:
+
+bash
+terraform state list
+aws_iam_group.this should not appear in the list.
+
+💡 Why -target=aws_iam_group.this
+Part	Meaning
+aws_iam_group	The resource type
+this	The resource name (the label after the type in your main.tf)
+The full address is <type>.<name> — so in your case, aws_iam_group.this.
+
+⚠️ If the Destroy Fails
+If the group has attached policies or is referenced elsewhere, you may need to target-destroy those attachments first. But for a bare aws_iam_group with no attachments (as in your main.tf), the single command above is sufficient.
+
+Once step 2 returns NoSuchEntity and step 3 shows the code is intact, the task is complete.
+
