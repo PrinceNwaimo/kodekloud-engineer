@@ -1,0 +1,90 @@
+The Nautilus DevOps team is strategically planning the migration of a portion of their infrastructure to the AWS cloud. 
+Acknowledging the magnitude of this endeavor, they have chosen to tackle the migration incrementally rather than as a single, massive transition. 
+They created some services in different regions and later found that some of those can be deleted now.
+
+Delete a VPC named nautilus-vpc present in us-east-1 region using Terraform. Make sure to keep the provisioning code, as we might need to provision this instance again later.
+
+The Terraform working directory is /home/bob/terraform.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+main.tf
+resource "aws_vpc" "this" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name        = "nautilus-vpc"
+  }
+}
+
+SOLUTION
+Since your resource is named this (i.e., resource "aws_vpc" "this"), the correct target address is aws_vpc.this.
+
+📋 Steps
+1. Destroy only the VPC (keeps the code in main.tf):
+
+bash
+cd /home/bob/terraform
+terraform destroy -target=aws_vpc.this -auto-approve
+This will:
+
+Delete the VPC nautilus-vpc in AWS.
+
+Remove it from the Terraform state.
+
+Leave the resource "aws_vpc" "this" { ... } block in main.tf untouched, so you can re-provision it later.
+
+2. Verify the VPC is deleted:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=nautilus-vpc" \
+  --query "Vpcs[].VpcId"
+Expected output:
+
+json
+[]
+An empty list confirms the VPC no longer exists.
+
+3. Confirm the provisioning code is still present:
+
+bash
+grep -n "nautilus-vpc" main.tf
+You should still see your original block:
+
+hcl
+resource "aws_vpc" "this" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "nautilus-vpc"
+  }
+}
+4. Confirm the resource is no longer in state:
+
+bash
+terraform state list
+aws_vpc.this should not appear in the list.
+
+⚠️ If the Destroy Fails Due to Dependencies
+AWS automatically creates a default route table, security group, and network ACL with every VPC. These are not separately managed by Terraform in your config, so they won't block the targeted destroy — AWS cleans them up automatically when the VPC is deleted.
+
+However, if you get a DependencyViolation error, it means there are custom resources still inside the VPC (e.g., subnets, internet gateways, custom security groups). Check what exists:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=<vpc-id>" \
+  --query "Subnets[].SubnetId"
+
+aws --endpoint-url=http://aws:4566 ec2 describe-internet-gateways \
+  --filters "Name=attachment.vpc-id,Values=<vpc-id>" \
+  --query "InternetGateways[].InternetGatewayId"
+If custom resources exist, you'd need to target-destroy them first. But based on the main.tf you shared (VPC only), the single command above should succeed cleanly.
+
+💡 Why -target=aws_vpc.this
+Part	Meaning
+aws_vpc	The resource type
+this	The resource name (the label after the type in your main.tf)
+The full address is always <type>.<name> — so in your case, aws_vpc.this.
+
+Once step 2 returns [] and step 3 shows the code is intact, the task is complete.
+
