@@ -1,0 +1,74 @@
+The Nautilus DevOps team is enhancing infrastructure automation and needs to provision a Security Group using Terraform with specific configurations.
+
+For this task, create an AWS Security Group using Terraform with the following requirements:
+
+The Security Group name devops-sg should be stored in a variable named KKE_sg.
+Note:
+
+1. The configuration values should be stored in a variables.tf file.
+
+2. The Terraform script should be structured with a main.tf file referencing variables.tf.
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+  To satisfy this task, you need two files: variables.tf (holding the configuration values) and main.tf (referencing those variables). The Security Group name must be stored in a variable named exactly KKE_sg.
+
+📄 /home/bob/terraform/variables.tf
+hcl
+variable "KKE_sg" {
+  description = "Name of the Security Group"
+  type        = string
+  default     = "devops-sg"
+}
+📄 /home/bob/terraform/main.tf
+hcl
+resource "aws_security_group" "devops_sg" {
+  name        = var.KKE_sg
+  description = "Security Group managed by Terraform"
+
+  tags = {
+    Name = var.KKE_sg
+  }
+}
+💡 Key Details
+Variable KKE_sg: Holds the Security Group name devops-sg, exactly as required. It's referenced in both the name argument and the Name tag.
+
+description: Required by the AWS provider for aws_security_group. A generic description is used since the task doesn't specify one.
+
+vpc_id omitted: Without an explicit vpc_id, the security group is created in the default VPC. If your environment expects a specific VPC, add vpc_id = <vpc-id>.
+
+main.tf references: var.KKE_sg — no hardcoded name in main.tf, keeping the script properly structured.
+
+Region: Handled by your existing provider.tf (us-east-1), so no provider block is needed here.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-security-groups \
+  --filters "Name=group-name,Values=devops-sg" \
+  --query "SecurityGroups[].{Name:GroupName,ID:GroupId,Description:Description}"
+You should see the security group devops-sg listed with its ID and description, confirming the variable was applied correctly.
+
+⚠️ If the Security Group Already Exists
+If devops-sg already exists in AWS but isn't in Terraform state, import it first:
+
+bash
+terraform import aws_security_group.devops_sg <security-group-id>
+Then run terraform apply again.
+
+
+  
