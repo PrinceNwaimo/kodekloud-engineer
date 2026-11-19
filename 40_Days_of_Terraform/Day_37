@@ -1,0 +1,61 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. 
+As part of this phased migration approach, they need to allocate an Elastic IP address to support external access for specific workloads.
+
+For this task, create an AWS Elastic IP using Terraform with the following requirement:
+
+The Elastic IP name xfusion-eip should be stored in a variable named KKE_eip. The Terraform working directory is /home/bob/terraform.
+Note:
+
+The configuration values should be stored in a variables.tf file.
+
+The Terraform script should be structured with a main.tf file referencing variables.tf.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To satisfy this task, you need two files: variables.tf (holding the configuration value) and main.tf (referencing that variable). Since an Elastic IP doesn't have a native name field, the name is applied via the Name tag.
+
+📄 /home/bob/terraform/variables.tf
+hcl
+variable "KKE_eip" {
+  description = "Name tag for the Elastic IP"
+  type        = string
+  default     = "xfusion-eip"
+}
+📄 /home/bob/terraform/main.tf
+hcl
+resource "aws_eip" "xfusion_eip" {
+  tags = {
+    Name = var.KKE_eip
+  }
+}
+💡 Key Details
+Variable KKE_eip: Holds the Elastic IP name xfusion-eip, exactly as required.
+
+Name tag: The EIP's name in AWS comes from the Name tag, so Name = var.KKE_eip is how the variable is applied.
+
+No hardcoded values in main.tf: All configuration lives in variables.tf, keeping the script properly structured.
+
+Region: Handled by your existing provider.tf (us-east-1), so no provider block is needed here.
+
+No vpc = true: In AWS provider v5, EIPs are VPC-based by default, so that argument is unnecessary (and deprecated).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-addresses \
+  --filters "Name=tag:Name,Values=xfusion-eip" \
+  --query "Addresses[].{IP:PublicIp,Name:Tags[?Key=='Name']|[0].Value}"
+You should see the Elastic IP with the name xfusion-eip, confirming the variable was applied correctly.
