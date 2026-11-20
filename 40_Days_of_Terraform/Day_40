@@ -1,0 +1,84 @@
+The Nautilus DevOps team is automating IAM policy creation using Terraform to enhance security and access management. 
+As part of this task, they need to create an IAM policy with specific requirements.
+
+For this task, create an AWS IAM policy using Terraform with the following requirements:
+
+The IAM policy name iampolicy_ravi should be stored in a variable named KKE_iampolicy.
+Note:
+
+The configuration values should be stored in a variables.tf file.
+
+The Terraform script should be structured with a main.tf file referencing variables.tf.
+
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To satisfy this task, you need two files: variables.tf (holding the IAM policy name) and main.tf (referencing that variable). The IAM policy name must be stored in a variable named exactly KKE_iampolicy.
+
+Since the task doesn't specify the policy permissions, a minimal valid policy document is included — you can adjust the actions if your environment expects something specific.
+
+📄 /home/bob/terraform/variables.tf
+hcl
+variable "KKE_iampolicy" {
+  description = "Name of the IAM policy"
+  type        = string
+  default     = "iampolicy_ravi"
+}
+📄 /home/bob/terraform/main.tf
+hcl
+resource "aws_iam_policy" "iampolicy_ravi" {
+  name        = var.KKE_iampolicy
+  description = "IAM policy managed by Terraform"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:Describe*"]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name = var.KKE_iampolicy
+  }
+}
+💡 Key Details
+Variable KKE_iampolicy: Holds the IAM policy name iampolicy_ravi, exactly as required.
+
+name argument: var.KKE_iampolicy is passed directly to the policy's name field.
+
+policy document: A valid IAM policy requires at least one statement. The ec2:Describe* read-only action is used as a safe default since the task doesn't specify permissions. Adjust if needed.
+
+Name tag: Added for clarity and consistency with the variable.
+
+No hardcoded values in main.tf: All configuration values live in variables.tf.
+
+Region: IAM is global, so no region-specific configuration is needed (your provider.tf already handles this).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam list-policies \
+  --scope Local \
+  --query "Policies[?PolicyName=='iampolicy_ravi'].{Name:PolicyName,Arn:Arn}"
+You should see the policy iampolicy_ravi returned with its ARN, confirming the variable was applied correctly.
+
+⚠️ If Specific Permissions Are Expected
+If the validator expects particular actions in the policy document (e.g., S3 read access, EC2 full access), replace the Action list accordingly. The task only specifies the name, so the policy content is flexible — but a valid statement is mandatory for the policy to be created.
