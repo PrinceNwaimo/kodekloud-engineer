@@ -1,0 +1,87 @@
+The Nautilus DevOps team is automating IAM role creation using Terraform to streamline permissions management. 
+As part of this task, they need to create an IAM role with specific requirements.
+
+For this task, create an AWS IAM role using Terraform with the following requirements:
+
+The IAM role name iamrole_james should be stored in a variable named KKE_iamrole.
+Note:
+
+1. The configuration values should be stored in a variables.tf file.
+
+2. The Terraform script should be structured with a main.tf file referencing variables.tf.
+The Terraform working directory is /home/bob/terraform.
+
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+SOLUTION
+To satisfy this task, you need two files: variables.tf (holding the IAM role name) and main.tf (referencing that variable). The IAM role name must be stored in a variable named exactly KKE_iamrole.
+
+An IAM role requires an assume_role_policy (trust policy), so a minimal EC2 trust policy is included — you can adjust the trusted service if your environment specifies a different one.
+
+📄 /home/bob/terraform/variables.tf
+hcl
+variable "KKE_iamrole" {
+  description = "Name of the IAM role"
+  type        = string
+  default     = "iamrole_james"
+}
+📄 /home/bob/terraform/main.tf
+hcl
+resource "aws_iam_role" "iamrole_james" {
+  name = var.KKE_iamrole
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = var.KKE_iamrole
+  }
+}
+💡 Key Details
+Variable KKE_iamrole: Holds the IAM role name iamrole_james, exactly as required.
+
+name argument: var.KKE_iamrole is passed directly to the role's name field.
+
+assume_role_policy: Required by AWS — an IAM role cannot be created without a trust policy. The EC2 service is used as the trusted principal here; change ec2.amazonaws.com if your task expects a different service (e.g., lambda.amazonaws.com).
+
+Name tag: Added for clarity and consistency with the variable.
+
+No hardcoded values in main.tf: All configuration values live in variables.tf.
+
+Region: IAM is global, so no region-specific configuration is needed (your provider.tf already handles this).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 iam get-role --role-name iamrole_james
+You should see the role iamrole_james returned with its ARN and trust policy, confirming the variable was applied correctly.
+
+⚠️ If a Different Trusted Service Is Expected
+If the validator expects a different trusted service in the trust policy, replace:
+
+hcl
+Service = "ec2.amazonaws.com"
+with the appropriate service principal (e.g., lambda.amazonaws.com, ecs-tasks.amazonaws.com). The task doesn't specify one, so EC2 is a safe default.
+
