@@ -1,0 +1,817 @@
+The Nautilus DevOps team is strategizing the migration of a portion of their infrastructure to the AWS cloud. Recognizing the scale of this undertaking, they have opted to approach the migration in incremental steps rather than as a single massive transition. To achieve this, they have segmented large tasks into smaller, more manageable units.
+
+For this task, create an EC2 instance using Terraform with the following requirements:
+
+The name of the instance must be xfusion-ec2-t1q2.
+
+Use the Amazon Linux ami-0c101f26f147fa7fd to launch this instance.
+
+The Instance type must be t2.micro.
+
+Create a new RSA key named xfusion-kp-t1q2.
+
+Attach the default (available by default) security group.
+
+The Terraform working directory is /home/bob/terraform/t1q2. Create the main.tf file (do not create a different .tf file) to provision the instance.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+SOLution
+Here is the main.tf for the /home/bob/terraform/t1q2 working directory. It creates the RSA key pair, looks up the default security group, and provisions the instance with all the specified requirements.
+
+📄 /home/bob/terraform/t1q2/main.tf
+hcl
+# Generate a new RSA private key
+resource "tls_private_key" "xfusion_kp" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Register the public key as an AWS key pair
+resource "aws_key_pair" "xfusion_kp" {
+  key_name   = "xfusion-kp-t1q2"
+  public_key = tls_private_key.xfusion_kp.public_key_openssh
+}
+
+# Look up the default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Look up the default security group in the default VPC
+data "aws_security_group" "default" {
+  vpc_id = data.aws_vpc.default.id
+  name   = "default"
+}
+
+# Create the EC2 instance
+resource "aws_instance" "xfusion_ec2" {
+  ami                    = "ami-0c101f26f147fa7fd"
+  instance_type          = "t2.micro"
+  key_name               = aws_key_pair.xfusion_kp.key_name
+  vpc_security_group_ids = [data.aws_security_group.default.id]
+
+  tags = {
+    Name = "xfusion-ec2-t1q2"
+  }
+}
+💡 Key Details
+Instance Name: Name = "xfusion-ec2-t1q2" tag — this is what identifies the instance in AWS.
+
+AMI: ami-0c101f26f147fa7fd (Amazon Linux) as specified.
+
+Instance Type: t2.micro.
+
+RSA Key Pair: tls_private_key generates a 4096-bit RSA key locally, and aws_key_pair registers its public portion in AWS with the name xfusion-kp-t1q2.
+
+Default Security Group: The data blocks look up the default VPC and its default security group, then attach it via vpc_security_group_ids.
+
+Region: Handled by provider.tf. Since the working directory is now /home/bob/terraform/t1q2, make sure provider.tf is present in that directory. If it isn't, copy it from the parent:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t1q2/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t1q2
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify (optional)
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=xfusion-ec2-t1q2" \
+  --query "Reservations[].Instances[].{ID:InstanceId,Type:InstanceType,Key:KeyName,State:State.Name}"
+You should see the instance with type t2.micro, key name xfusion-kp-t1q2, and state running (or pending briefly).
+
+⚠️ Note on the Working Directory
+The task specifies /home/bob/terraform/t1q2 (a subdirectory). Terraform only reads .tf files from the current working directory, not parent directories. So either:
+
+Ensure provider.tf is copied into t1q2/, or
+
+Add the provider block directly into main.tf (if no provider.tf exists there).
+
+If you already have provider.tf in t1q2/, the main.tf above is complete as-is.
+
+Question 2:
+The Nautilus DevOps team has been creating a couple of services on AWS cloud. They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. Recently they came up with requirements mentioned below.
+
+There is an instance named xfusion-ec2-t1q3 and an elastic-ip named xfusion-ec2-eip-t1q3 in us-east-1 region. Attach the xfusion-ec2-eip-t1q3 elastic-ip to the xfusion-ec2-t1q3 instance using Terraform only. The Terraform working directory is /home/bob/terraform/t1q3. Update the main.tf file (do not create a separate .tf file) to attach the specified Elastic IP to the instance.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+'xfusion-ec2-eip-t1q3' is attached to the 'xfusion-ec2-t1q3' instance using 'terraform'?
+
+SOLUTION
+Since both the EC2 instance and the Elastic IP are already defined as resources in your main.tf, you should reference them directly rather than using data sources. You just need to add the aws_eip_association resource.
+
+📄 Updated /home/bob/terraform/t1q3/main.tf
+hcl
+# Provision EC2 instance
+resource "aws_instance" "ec2" {
+  ami           = "ami-0c101f26f147fa7fd"
+  instance_type = "t2.micro"
+  subnet_id     = "subnet-dd6e4a405702d16f1"
+  vpc_security_group_ids = [
+    "sg-1e890d588add936fe"
+  ]
+
+  tags = {
+    Name = "xfusion-ec2-t1q3"
+  }
+}
+
+# Provision Elastic IP
+resource "aws_eip" "ec2_eip" {
+  tags = {
+    Name = "xfusion-ec2-eip-t1q3"
+  }
+}
+
+# Associate the Elastic IP with the EC2 instance
+resource "aws_eip_association" "ec2_eip_assoc" {
+  instance_id   = aws_instance.ec2.id
+  allocation_id = aws_eip.ec2_eip.id
+}
+💡 Key Details
+Direct References: aws_instance.ec2.id and aws_eip.ec2_eip.id refer to the resources already defined in your file, creating a clean dependency chain.
+
+aws_eip_association: Links the EIP to the instance without managing either resource's lifecycle.
+
+No Data Sources Needed: Since both resources are Terraform-managed in the same configuration, data lookups would be redundant and could fail.
+
+Region: Handled by your provider.tf in the t1q3 directory (us-east-1).
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t1q3
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+It should return:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Association
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-addresses \
+  --filters "Name=tag:Name,Values=xfusion-ec2-eip-t1q3" \
+  --query "Addresses[].{IP:PublicIp,InstanceId:InstanceId,AllocationId:AllocationId}"
+If successful, InstanceId will be populated with the ID of xfusion-ec2-t1q3. You can cross-check it matches:
+
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --filters "Name=tag:Name,Values=xfusion-ec2-t1q3" \
+  --query "Reservations[].Instances[].InstanceId"
+✅ Answer to Your Question
+Yes — adding the aws_eip_association block as shown above will attach the Elastic IP xfusion-ec2-eip-t1q3 to the xfusion-ec2-t1q3 instance using Terraform. The InstanceId field in the EIP's description confirms the attachment after apply.
+
+QUESTION 3:
+The Nautilus DevOps team has been creating a couple of services on AWS cloud. They have been breaking down the migration into smaller tasks, allowing for better control, risk mitigation, and optimization of resources throughout the migration process. Recently they came up with requirements mentioned below.
+
+An IAM user named iamuser_kareem_t2q3 and a policy named iampolicy_kareem_t2q3 already exists. Use Terraform to attach the IAM policy iampolicy_kareem_t2q3 to the IAM user iamuser_kareem_t2q3. The Terraform working directory is /home/bob/terraform. Update the main.tf file (do not create a separate .tf file) to attach the specified IAM policy to the IAM user.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+IAM policy 'iampolicy_kareem_t2q3' is attached to the IAM user 'iamuser_kareem_t2q3' using 'terraform'?
+
+SOLUTION
+Since both the IAM user and policy are already defined as resources in your main.tf, you just need to add the aws_iam_user_policy_attachment resource that references them directly.
+
+📄 Updated /home/bob/terraform/main.tf
+hcl
+# Create IAM user
+resource "aws_iam_user" "user" {
+  name = "iamuser_kareem_t2q3"
+
+  tags = {
+    Name = "iamuser_kareem_t2q3"
+  }
+}
+
+# Create IAM Policy
+resource "aws_iam_policy" "policy" {
+  name        = "iampolicy_kareem_t2q3"
+  description = "IAM policy allowing EC2 read actions for kareem"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:Read*"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the IAM policy to the IAM user
+resource "aws_iam_user_policy_attachment" "kareem_attach" {
+  user       = aws_iam_user.user.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+💡 What Was Added
+aws_iam_user_policy_attachment: The resource that performs the attachment.
+
+user = aws_iam_user.user.name: References the user already defined above (iamuser_kareem_t2q3).
+
+policy_arn = aws_iam_policy.policy.arn: References the policy already defined above (iampolicy_kareem_t2q3).
+
+Terraform will infer the dependencies automatically — it creates the user and policy first, then attaches the policy to the user.
+
+🚀 Execution Steps
+bash
+cd /home/bob/terraform
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Attachment
+bash
+aws --endpoint-url=http://aws:4566 iam list-attached-user-policies --user-name iamuser_kareem_t2q3
+You should see iampolicy_kareem_t2q3 listed in the attached policies for the user.
+
+🎯 Answer to Your Question
+Yes — with this updated main.tf, the policy iampolicy_kareem_t2q3 is attached to the user iamuser_kareem_t2q3 using Terraform. The list-attached-user-policies output confirms it after apply.
+
+QUESTION 4:
+When establishing infrastructure on the AWS cloud, Identity and Access Management (IAM) is among the first and most critical services to configure. IAM facilitates the creation and management of user accounts, groups, roles, policies, and other access controls. The Nautilus DevOps team is currently in the process of configuring these resources and has outlined the following requirements:
+
+For this task, create an IAM user named iamuser_kareem_t2q1 using terraform. The Terraform working directory is /home/bob/terraform/t2q1. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+IAM user 'iamuser_kareem_t2q1' has been created using 'terraform'?
+
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t2q1 working directory to create the IAM user.
+
+📄 /home/bob/terraform/t2q1/main.tf
+hcl
+resource "aws_iam_user" "iamuser_kareem" {
+  name = "iamuser_kareem_t2q1"
+
+  tags = {
+    Name = "iamuser_kareem_t2q1"
+  }
+}
+💡 Key Details
+Resource: aws_iam_user creates an IAM user.
+
+name: Exactly iamuser_kareem_t2q1 as required — this is what the validator checks.
+
+Name tag: Added for clarity, though the validator primarily checks the name argument.
+
+Region: IAM is a global service, so no region-specific configuration is needed (your provider.tf handles this).
+
+⚠️ Ensure provider.tf Exists in t2q1/
+Terraform only reads .tf files from the current working directory, not parent directories. Since the task specifies /home/bob/terraform/t2q1, copy the provider configuration there:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t2q1/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t2q1
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the User
+bash
+aws --endpoint-url=http://aws:4566 iam get-user --user-name iamuser_kareem_t2q1
+You should see the user returned with its ARN, path (/), and creation date.
+
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the IAM user iamuser_kareem_t2q1 is created using Terraform. The get-user output confirms its existence after apply.
+
+If terraform plan fails with "no provider configuration," it means provider.tf isn't in the t2q1/ directory — run the cp command above and retry.
+
+QUESTION 5:
+The Nautilus DevOps team needs to set up a DynamoDB table for storing user data. They need to create a DynamoDB table with the following specifications:
+
+1) The table name should be xfusion-users-t3q1.
+
+2) The primary key should be xfusion_id_t3q1 (String).
+
+3) The table should use PAY_PER_REQUEST billing mode.
+
+Use Terraform to create this DynamoDB table. The Terraform working directory is /home/bob/terraform/t3q1. Create the main.tf file (do not create a different .tf file) to create the DynamoDB table.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+DynamoDB table 'xfusion-users-t3q1' was created using 'Terraform' with 'PAY_PER_REQUEST' billing mode?
+
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t3q1 working directory to create the DynamoDB table.
+
+📄 /home/bob/terraform/t3q1/main.tf
+hcl
+resource "aws_dynamodb_table" "xfusion_users" {
+  name         = "xfusion-users-t3q1"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "xfusion_id_t3q1"
+
+  attribute {
+    name = "xfusion_id_t3q1"
+    type = "S"
+  }
+}
+💡 Key Details
+Table Name: Exactly xfusion-users-t3q1 as required.
+
+Billing Mode: PAY_PER_REQUEST (on-demand), so no read_capacity or write_capacity is needed — those are only required for PROVISIONED mode.
+
+Primary Key: hash_key = "xfusion_id_t3q1" with a matching attribute block of type S (String). The attribute block must be defined for every key used in the table.
+
+No tags: Kept minimal to avoid drift in LocalStack.
+
+Region: Handled by provider.tf in the t3q1/ directory.
+
+⚠️ Ensure provider.tf Exists in t3q1/
+Terraform only reads .tf files from the current working directory, not parent directories. Since the task specifies /home/bob/terraform/t3q1, copy the provider configuration there:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t3q1/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t3q1
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Table
+bash
+aws --endpoint-url=http://aws:4566 dynamodb describe-table --table-name xfusion-users-t3q1
+You should see:
+
+TableName: xfusion-users-t3q1
+
+BillingModeSummary.BillingMode: PAY_PER_REQUEST
+
+KeySchema: xfusion_id_t3q1 as HASH
+
+AttributeDefinitions: xfusion_id_t3q1 of type S
+
+TableStatus: ACTIVE
+
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the DynamoDB table xfusion-users-t3q1 is created using Terraform with PAY_PER_REQUEST billing mode and xfusion_id_t3q1 (String) as the primary key. The describe-table output confirms all three requirements after apply.
+
+If terraform plan fails with "no provider configuration," copy provider.tf into the t3q1/ directory as shown above and retry.
+
+QUESTION 6:
+The Nautilus DevOps team needs to store sensitive data securely using AWS Secrets Manager. They need to create a secret with the following specifications:
+
+1) The secret name should be xfusion-secret-t3q3.
+
+2) The secret value should contain a key-value pair with username: admin and password: Namin123.
+
+3) Use Terraform to create the secret in AWS Secrets Manager.
+
+The Terraform working directory is /home/bob/terraform/t3q3. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+Secrets Manager secret 'xfusion-secret-t3q3' with the correct key-value pair was created using 'Terraform'?
+
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t3q3 working directory to create the Secrets Manager secret with the specified key-value pair.
+
+📄 /home/bob/terraform/t3q3/main.tf
+hcl
+resource "aws_secretsmanager_secret" "xfusion_secret" {
+  name = "xfusion-secret-t3q3"
+}
+
+resource "aws_secretsmanager_secret_version" "xfusion_secret_version" {
+  secret_id = aws_secretsmanager_secret.xfusion_secret.id
+
+  secret_string = jsonencode({
+    username = "admin"
+    password = "Namin123"
+  })
+}
+💡 Key Details
+Secret Name: aws_secretsmanager_secret with name = "xfusion-secret-t3q3" — exactly as required.
+
+Secret Value: aws_secretsmanager_secret_version holds the actual data. Using jsonencode() produces a proper JSON object:
+
+json
+{"username":"admin","password":"Namin123"}
+Dependency: secret_id = aws_secretsmanager_secret.xfusion_secret.id ensures the secret is created first, then its version.
+
+No tags: Kept minimal to avoid drift in LocalStack.
+
+Region: Handled by provider.tf in the t3q3/ directory.
+
+⚠️ Ensure provider.tf Exists in t3q3/
+Terraform only reads .tf files from the current working directory. Copy the provider configuration:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t3q3/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t3q3
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Secret
+bash
+aws --endpoint-url=http://aws:4566 secretsmanager get-secret-value \
+  --secret-id xfusion-secret-t3q3 \
+  --query "SecretString" --output text
+Expected output:
+
+json
+{"username":"admin","password":"Namin123"}
+You can also confirm the secret name exists:
+
+bash
+aws --endpoint-url=http://aws:4566 secretsmanager describe-secret --secret-id xfusion-secret-t3q3
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the Secrets Manager secret xfusion-secret-t3q3 is created using Terraform, containing the key-value pair username: admin and password: Namin123. The get-secret-value output confirms both the secret and its content after apply.
+
+If terraform plan fails with "no provider configuration," copy provider.tf into the t3q3/ directory as shown above and retry.
+
+QUESTION 7
+As part of the data migration process, the Nautilus DevOps team is actively creating several S3 buckets on AWS using Terraform. They plan to utilize both private and public S3 buckets to store the relevant data. Given the ongoing migration of other infrastructure to AWS, it is logical to consolidate data storage within the AWS environment as well.
+
+Create an S3 bucket using Terraform with the following details:
+
+1) The name of the S3 bucket must be xfusion-s3-937853010-t4q1.
+
+2) The S3 bucket must block all public access, making it a private bucket.
+
+The Terraform working directory is /home/bob/terraform/t4q1. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Notes:
+
+Use Terraform to provision the S3 bucket.
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+Ensure the resources are created in the us-east-1 region.
+The bucket must have block public access enabled to restrict any public access.
+
+'xfusion-s3-937853010-t4q1' private S3 bucket was created using 'terraform'?
+
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t4q1 working directory to create the private S3 bucket with all public access blocked.
+
+📄 /home/bob/terraform/t4q1/main.tf
+hcl
+resource "aws_s3_bucket" "xfusion_bucket" {
+  bucket = "xfusion-s3-937853010-t4q1"
+
+  tags = {
+    Name = "xfusion-s3-937853010-t4q1"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "xfusion_bucket_block" {
+  bucket = aws_s3_bucket.xfusion_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+💡 Key Details
+Bucket Name: Exactly xfusion-s3-937853010-t4q1 as required.
+
+Public Access Block: All four flags set to true:
+
+block_public_acls – blocks new public ACLs
+
+block_public_policy – blocks new public bucket policies
+
+ignore_public_acls – ignores any existing public ACLs
+
+restrict_public_buckets – restricts public bucket policies
+
+No ACL resource: A private bucket doesn't need an ACL override — do not add aws_s3_bucket_acl with public-read.
+
+Region: Handled by provider.tf in the t4q1/ directory (us-east-1).
+
+⚠️ Ensure provider.tf Exists in t4q1/
+Terraform only reads .tf files from the current working directory, not parent directories. Since the task specifies /home/bob/terraform/t4q1, copy the provider configuration there:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t4q1/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t4q1
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Bucket and Public Access Block
+bash
+aws --endpoint-url=http://aws:4566 s3api get-public-access-block --bucket xfusion-s3-937853010-t4q1
+Expected output:
+
+json
+{
+  "PublicAccessBlockConfiguration": {
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+  }
+}
+You can also confirm the bucket exists:
+
+bash
+aws --endpoint-url=http://aws:4566 s3api head-bucket --bucket xfusion-s3-937853010-t4q1
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the private S3 bucket xfusion-s3-937853010-t4q1 is created using Terraform with all public access blocked. The get-public-access-block output confirms all four settings are true after apply.
+
+If terraform plan fails with "no provider configuration," copy provider.tf into the t4q1/ directory as shown above and retry.
+
+QUESTION 8
+As part of the data migration process, the Nautilus DevOps team is actively creating several S3 buckets on AWS. They plan to utilize both private and public S3 buckets to store the relevant data. Given the ongoing migration of other infrastructure to AWS, it is logical to consolidate data storage within the AWS environment as well.
+
+Create a public S3 bucket named xfusion-s3-937853010-t4q2 using Terraform.
+
+Ensure the bucket is accessible publicly once created by setting the proper ACL.
+
+The Terraform working directory is /home/bob/terraform/t4q2. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Notes:
+
+Create the resources only in the us-east-1 region.
+Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+The name of the S3 bucket should be based on xfusion-s3-937853010-t4q2.
+You can use the ACL settings to ensure the bucket is publicly accessible.
+
+'xfusion-s3-937853010-t4q2' Public S3 bucket was created using 'Terraform'?
+
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t4q2 working directory to create the public S3 bucket.
+
+📄 /home/bob/terraform/t4q2/main.tf
+hcl
+# Create the S3 bucket
+resource "aws_s3_bucket" "xfusion_bucket" {
+  bucket = "xfusion-s3-937853010-t4q2"
+
+  tags = {
+    Name = "xfusion-s3-937853010-t4q2"
+  }
+}
+
+# Set ownership controls so ACLs can be applied
+resource "aws_s3_bucket_ownership_controls" "xfusion_bucket_ownership" {
+  bucket = aws_s3_bucket.xfusion_bucket.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+# Disable the public access block that AWS applies by default
+resource "aws_s3_bucket_public_access_block" "xfusion_bucket_public_access" {
+  bucket = aws_s3_bucket.xfusion_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+# Apply the public-read ACL to make the bucket publicly accessible
+resource "aws_s3_bucket_acl" "xfusion_bucket_acl" {
+  depends_on = [
+    aws_s3_bucket_ownership_controls.xfusion_bucket_ownership,
+    aws_s3_bucket_public_access_block.xfusion_bucket_public_access,
+  ]
+
+  bucket = aws_s3_bucket.xfusion_bucket.id
+  acl    = "public-read"
+}
+💡 Key Details
+Bucket Name: Exactly xfusion-s3-937853010-t4q2 as required.
+
+aws_s3_bucket_ownership_controls: Sets object_ownership to BucketOwnerPreferred, which is required for ACLs to take effect.
+
+aws_s3_bucket_public_access_block: All four flags set to false to disable AWS's default public access restrictions.
+
+aws_s3_bucket_acl: Applies the public-read canned ACL. The depends_on ensures the ownership controls and public access block are configured first, preventing a race condition.
+
+Region: Handled by provider.tf in the t4q2/ directory (us-east-1).
+
+⚠️ Ensure provider.tf Exists in t4q2/
+Terraform only reads .tf files from the current working directory. Copy the provider configuration:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t4q2/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t4q2
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the Bucket and ACL
+bash
+# Confirm the bucket exists
+aws --endpoint-url=http://aws:4566 s3api head-bucket --bucket xfusion-s3-937853010-t4q2
+
+# Confirm the ACL grants public READ access
+aws --endpoint-url=http://aws:4566 s3api get-bucket-acl --bucket xfusion-s3-937853010-t4q2
+The get-bucket-acl output should include a grant with Grantee of type Group and URI http://acs.amazonaws.com/groups/global/AllUsers with Permission: READ.
+
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the public S3 bucket xfusion-s3-937853010-t4q2 is created using Terraform with the public-read ACL, making it publicly accessible. The get-bucket-acl output confirms the public READ grant after apply.
+
+Note: Some KodeKloud community posts report that the lab checker sometimes looks in real AWS instead of LocalStack, causing false failures even when the bucket exists locally. If your bucket exists and the ACL is correct but the validator still fails, this may be a known platform issue rather than a configuration error
+
+QUESTION 9
+The Nautilus DevOps team is strategically planning the migration of a portion of their infrastructure to the AWS cloud. Acknowledging the magnitude of this endeavor, they have chosen to tackle the migration incrementally rather than as a single, massive transition. Their approach involves creating Virtual Private Clouds (VPCs) as the initial step, as they will be provisioning various services under different VPCs.
+
+For this task, create a VPC named xfusion-vpc-t5q3 in the us-east-1 region with the Amazon-provided IPv6 CIDR block using terraform.
+
+The Terraform working directory is /home/bob/terraform/t5q3. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+'xfusion-vpc-t5q3' was created using 'terraform'?
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t5q3 working directory to create the VPC with an Amazon-provided IPv6 CIDR block.
+
+📄 /home/bob/terraform/t5q3/main.tf
+hcl
+resource "aws_vpc" "xfusion_vpc" {
+  cidr_block                       = "10.0.0.0/16"
+  assign_generated_ipv6_cidr_block = true
+
+  tags = {
+    Name = "xfusion-vpc-t5q3"
+  }
+}
+💡 Key Details
+IPv4 CIDR: cidr_block = "10.0.0.0/16" is mandatory — every VPC requires an IPv4 block. It won't conflict with the IPv6 block.
+
+IPv6 CIDR: assign_generated_ipv6_cidr_block = true tells AWS to automatically assign a /56 IPv6 CIDR block from its pool. You do not specify the IPv6 range yourself.
+
+VPC Name: Name = "xfusion-vpc-t5q3" tag — this is what the validator checks.
+
+Region: Handled by provider.tf in the t5q3/ directory (us-east-1).
+
+⚠️ Ensure provider.tf Exists in t5q3/
+Terraform only reads .tf files from the current working directory, not parent directories. Since the task specifies /home/bob/terraform/t5q3, copy the provider configuration there:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t5q3/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t5q3
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the VPC and IPv6 Association
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=xfusion-vpc-t5q3" \
+  --query "Vpcs[].{CIDR:CidrBlock,IPv6:Ipv6CidrBlockAssociationSet[].Ipv6CidrBlock,Name:Tags[?Key=='Name']|[0].Value}"
+You should see:
+
+CIDR: 10.0.0.0/16
+
+IPv6: an Amazon-assigned IPv6 CIDR block (e.g., 2600:1f18:...::/56)
+
+Name: xfusion-vpc-t5q3
+
+If the IPv6 field returns a value, the Amazon-provided IPv6 CIDR block was successfully associated with the VPC.
+
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the VPC xfusion-vpc-t5q3 is created in us-east-1 using Terraform with an Amazon-provided IPv6 CIDR block. The describe-vpcs output confirms both the name and the IPv6 association after apply.
+
+If terraform plan fails with "no provider configuration," copy provider.tf into the t5q3/ directory as shown above and retry.
+
+QUESTION 10
+The Nautilus DevOps team is strategically planning the migration of a portion of their infrastructure to the AWS cloud. Acknowledging the magnitude of this endeavor, they have chosen to tackle the migration incrementally rather than as a single, massive transition. Their approach involves creating Virtual Private Clouds (VPCs) as the initial step, as they will be provisioning various services under different VPCs.
+
+Create a VPC named xfusion-vpc-t5q2 in us-east-1 region with 192.168.0.0/24 IPv4 CIDR using terraform.
+
+
+The Terraform working directory is /home/bob/terraform/t5q2. Create the main.tf file (do not create a different .tf file) to accomplish this task.
+
+Note: Right-click under the EXPLORER section in VS Code and select Open in Integrated Terminal to launch the terminal.
+
+
+'xfusion-vpc-t5q2' was created using 'terraform'?
+
+SOLUTION
+Here is the main.tf for the /home/bob/terraform/t5q2 working directory to create the VPC with the specified IPv4 CIDR block.
+
+📄 /home/bob/terraform/t5q2/main.tf
+hcl
+resource "aws_vpc" "xfusion_vpc" {
+  cidr_block = "192.168.0.0/24"
+
+  tags = {
+    Name = "xfusion-vpc-t5q2"
+  }
+}
+💡 Key Details
+VPC Name: Name = "xfusion-vpc-t5q2" tag — this is what the validator checks.
+
+CIDR Block: Exactly 192.168.0.0/24 as required.
+
+Region: Handled by provider.tf in the t5q2/ directory (us-east-1).
+
+No extra arguments: No IPv6 assignment is needed for this task, unlike the t5q3 task.
+
+⚠️ Ensure provider.tf Exists in t5q2/
+Terraform only reads .tf files from the current working directory, not parent directories. Since the task specifies /home/bob/terraform/t5q2, copy the provider configuration there:
+
+bash
+cp /home/bob/terraform/provider.tf /home/bob/terraform/t5q2/
+🚀 Execution Steps
+bash
+cd /home/bob/terraform/t5q2
+terraform init
+terraform plan
+terraform apply --auto-approve
+✅ Confirm No Changes
+bash
+terraform plan
+Expected:
+
+text
+No changes. Your infrastructure matches the configuration.
+🔍 Verify the VPC
+bash
+aws --endpoint-url=http://aws:4566 ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=xfusion-vpc-t5q2" \
+  --query "Vpcs[].{CIDR:CidrBlock,Name:Tags[?Key=='Name']|[0].Value,State:State}"
+You should see:
+
+CIDR: 192.168.0.0/24
+
+Name: xfusion-vpc-t5q2
+
+State: available
+
+🎯 Answer to Your Question
+Yes — with this main.tf applied, the VPC xfusion-vpc-t5q2 is created in us-east-1 using Terraform with the IPv4 CIDR block 192.168.0.0/24. The describe-vpcs output confirms both the name and the CIDR after apply.
+
+If terraform plan fails with "no provider configuration," copy provider.tf into the t5q2/ directory as shown above and retry.
