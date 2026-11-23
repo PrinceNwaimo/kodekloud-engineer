@@ -1,0 +1,44 @@
+The Nautilus development team shared with the DevOps team requirements for new application development, setting up a Git repository for that project. 
+Create a Git repository on Storage server in Stratos DC as per details given below:
+
+Install git package using yum on Storage server.
+After that, create/init a git repository named /opt/ecommerce.git (use the exact name as asked and make sure not to create a bare repository).
+
+SOLUTION
+To set up the Git repository for the Nautilus development team on the Storage server in Stratos DC, you need to install Git using yum and then initialise a non-bare repository at the exact path /opt/ecommerce.git.
+
+📋 Step-by-Step Instructions
+Log in to the Storage Server
+Use SSH to connect to the storage server (the exact hostname may be ststor01 in your environment).
+
+bash
+ssh natasha@ststor01
+Obtain Root Privileges
+Switch to the root user or use sudo for the following commands.
+
+bash
+sudo su -
+Install Git Using YUM
+Install the Git package with yum. The -y flag automatically confirms the installation.
+
+bash
+yum install -y git
+Create and Initialise the Non-Bare Repository
+Navigate to the /opt directory and initialise the repository. Do not use the --bare flag; the task explicitly requires a non-bare repository.
+
+bash
+cd /opt
+git init /opt/ecommerce.git
+After running git init, a hidden .git sub-directory will be created inside /opt/ecommerce.git, confirming that a standard (non-bare) repository has been set up.
+
+✅ Verification
+You can verify the installation and repository creation with the following commands:
+
+bash
+# Check Git version
+git --version
+
+# Confirm the repository directory exists
+ls -la /opt/ecommerce.git
+If you see a .git directory inside /opt/ecommerce.git, the task has been completed successfully.
+
