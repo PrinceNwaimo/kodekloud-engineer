@@ -1,0 +1,383 @@
+The developers are adding some content under new repositories. There was some data added under /home/sarah/story-blog-t1q8 repository on the storage server. Commit the files that are currently in the staging area under this repository.
+
+
+First check the status of the file using the command git status. Then commit using the commit message as Added the lion and mouse story
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+
+SOLUTION
+
+Steps on the Storage server
+SSH into the Storage server as sarah:
+
+bash
+ssh sarah@ststor01
+# password: S3cure321
+Go to the repository:
+
+bash
+cd /home/sarah/story-blog-t1q8
+Check the status first (as required):
+
+bash
+git status
+You should see the files listed under "Changes to be committed:" — these are the files currently in the staging area. Files under "Changes not staged" or "Untracked files" (if any) must not be included.
+
+Commit the staged files with the exact message:
+
+bash
+git commit -m "Added the lion and mouse story"
+git commit without -a commits only what is already staged, so any unstaged/untracked files will be left out automatically — exactly what the task asks.
+
+Verify the commit:
+
+bash
+git log --oneline -1
+git status
+Expected output:
+
+text
+<hash> Added the lion and mouse story
+If Git complains about missing identity (Please tell me who you are), set it and retry the commit:
+
+bash
+git config user.email "sarah@example.com"
+git config user.name "sarah"
+git commit -m "Added the lion and mouse story"
+No push is required — the task only asks to commit the files currently in the staging area.
+
+QUESTION 2:Sarah created a new file named notes-t1q9.txt under /home/sarah/story-blog-t1q9 repository where she plans to write down ideas about the story for personal purposes. She does not want git to track this file or share it with her team mates.
+
+It is good that the file is untracked. But it is still under GIT's radar. If you run the git add . command, accidentally git will start to track this file.
+
+
+Let's configure git to ignore this file permanently.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+
+'/home/sarah/story-blog-t1q9' file is ignored?
+
+SOLUTION
+⚠️ Clarification first
+/home/sarah/story-blog-t1q9 is the repository directory, not the file to ignore. The file Sarah wants Git to ignore is:
+
+text
+/home/sarah/story-blog-t1q9/notes-t1q9.txt
+So git check-ignore -v /home/sarah/story-blog-t1q9 will normally produce no output — that does not mean the task failed. You need to check the file notes-t1q9.txt.
+
+✅ Configure Git to ignore notes-t1q9.txt
+SSH into the Storage server as sarah:
+
+bash
+ssh sarah@ststor01
+# password: S3cure321
+Go to the repository:
+
+bash
+cd /home/sarah/story-blog-t1q9
+Add the filename to .gitignore (avoids duplicates):
+
+bash
+grep -qxF 'notes-t1q9.txt' .gitignore 2>/dev/null || echo 'notes-t1q9.txt' >> .gitignore
+Verify the file is now ignored:
+
+bash
+git check-ignore -v notes-t1q9.txt
+Expected output similar to:
+
+text
+.gitignore:1:notes-t1q9.txt	notes-t1q9.txt
+If you get no output, the file is not ignored.
+
+Confirm with git status:
+
+bash
+git status
+notes-t1q9.txt should no longer appear as untracked.
+
+Commit .gitignore so the rule is shared permanently with the team:
+
+bash
+git add .gitignore
+git commit -m "Ignore notes-t1q9.txt"
+If Git complains about identity:
+
+bash
+git config user.email "sarah@example.com"
+git config user.name "sarah"
+Then retry the commit.
+
+🔍 Answer to your question
+'/home/sarah/story-blog-t1q9' file is ignored?
+
+No. That path is the repository directory, not the notes file. Check the actual file instead:
+
+bash
+cd /home/sarah/story-blog-t1q9
+git check-ignore -v notes-t1q9.txt
+Output shown → the file is ignored ✅
+
+No output → the file is not ignored ❌
+
+Also, git add . will no longer stage notes-t1q9.txt once it is listed in .gitignore.
+
+QUESTION 3:The Nautilus dev team is currently in the process of creating Git repositories, a new requirement has emerged to create a repository on the storage server. Below are the details for this request.
+
+
+Create and initialise a git repository at /home/sarah/story-blog-t1q3 on Storage server.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+
+Created and initialised a git repository at '/home/sarah/story-blog-t1q3' on Storage server?
+
+SOLUTION
+✅ Create and initialise the Git repository
+SSH into the Storage server as sarah:
+
+bash
+ssh sarah@ststor01
+# password: S3cure321
+Create the directory (if it doesn't exist) and initialise Git:
+
+bash
+mkdir -p /home/sarah/story-blog-t1q3
+cd /home/sarah/story-blog-t1q3
+git init
+Expected output:
+
+text
+Initialized empty Git repository in /home/sarah/story-blog-t1q3/.git/
+If the directory already exists and you just need to init:
+
+bash
+cd /home/sarah/story-blog-t1q3
+git init
+Verify the repository was created and initialised:
+
+bash
+cd /home/sarah/story-blog-t1q3
+ls -la .git
+git status
+Expected git status output:
+
+text
+On branch master
+No commits yet
+nothing to commit (create/copy files and use "git add" to track)
+And ls -la .git should show the .git directory contents (HEAD, config, objects, refs, etc.).
+
+🔍 Answer to your question
+Created and initialised a git repository at '/home/sarah/story-blog-t1q3' on Storage server?
+
+Verify it by running:
+
+bash
+cd /home/sarah/story-blog-t1q3 && git rev-parse --is-inside-work-tree
+Output true → ✅ the directory is a Git repository (created and initialised)
+
+Error fatal: not a git repository → ❌ it is not initialised yet
+
+Alternatively:
+
+bash
+ls -la /home/sarah/story-blog-t1q3/.git
+If the .git directory exists with HEAD, config, refs, etc., the repository is correctly created and initialised.
+
+Note: No --bare flag is used, so this is a normal (non-bare) repository — which matches the requirement to "create and initialise a git repository" at that path.
+
+QUESTION 4: The Nautilus application development team has been working on a project repository /opt/news-t2q3.git. This repo is cloned at /usr/src/kodekloudrepos/news-t2q3 on storage server in Stratos DC. They recently shared the following requirements with DevOps team:
+
+
+Create a new branch nautilus-t2q3 in /usr/src/kodekloudrepos/news-t2q3 repo from master and copy the /tmp/index-t2q3.html file (present on storage server itself) into the repo. Further, add/commit this file in the new branch and merge back that branch into master branch. Finally, push the changes to the origin for both of the branches.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+
+Verify Task
+SOLUTION
+✅ Complete Task (if not yet done) + Verification
+SSH as sarah:
+
+bash
+ssh sarah@ststor01
+# password: S3cure321
+🛠️ Steps to Complete the Task
+Go to the cloned repo and confirm you're on master with a clean tree:
+
+bash
+cd /usr/src/kodekloudrepos/news-t2q3
+git checkout master
+git status
+Create and switch to the new branch nautilus-t2q3 from master:
+
+bash
+git checkout -b nautilus-t2q3 master
+Copy /tmp/index-t2q3.html into the repo:
+
+bash
+cp /tmp/index-t2q3.html .
+Add and commit the file on the new branch:
+
+bash
+git add index-t2q3.html
+git commit -m "Add index-t2q3.html"
+If Git complains about identity:
+
+bash
+git config user.email "sarah@example.com"
+git config user.name "sarah"
+Then retry the commit.
+
+Switch back to master and merge nautilus-t2q3 into it:
+
+bash
+git checkout master
+git merge nautilus-t2q3
+Push both branches to origin:
+
+bash
+git push origin nautilus-t2q3
+git push origin master
+🔍 Verification Commands
+Run these on ststor01 inside /usr/src/kodekloudrepos/news-t2q3:
+
+bash
+cd /usr/src/kodekloudrepos/news-t2q3
+
+# 1. Both branches exist and point to (or contain) the commit
+git branch -a
+
+# 2. The commit history shows the merge into master
+git log --oneline --graph --decorate --all -6
+
+# 3. The file exists in the branch and in master
+git ls-tree nautilus-t2q3 -- index-t2q3.html
+git ls-tree master         -- index-t2q3.html
+
+# 4. File is actually committed (not just on disk)
+git log --oneline -- index-t2q3.html
+
+# 5. Remote has the branches (after push)
+git ls-remote --heads origin
+📋 Expected Verification Results
+Check	Expected Output
+git branch -a	Shows master, nautilus-t2q3, remotes/origin/master, remotes/origin/nautilus-t2q3
+git log --oneline --graph --all	Shows nautilus-t2q3 branch commit for index-t2q3.html and a merge commit on master (or fast-forward)
+git ls-tree nautilus-t2q3 -- index-t2q3.html	100644 blob <hash> index-t2q3.html
+git ls-tree master -- index-t2q3.html	100644 blob <hash> index-t2q3.html (same hash = merged)
+git log --oneline -- index-t2q3.html	At least one commit like Add index-t2q3.html
+git ls-remote --heads origin	Lists both refs/heads/master and refs/heads/nautilus-t2q3
+✅ Final Answer to "Verify Task"
+The task is complete and verified when all of the following are true:
+
+✅ Branch nautilus-t2q3 exists locally (created from master)
+
+✅ index-t2q3.html is committed on nautilus-t2q3 (visible in git log -- index-t2q3.html)
+
+✅ master contains the file (after merge — same blob hash as on nautilus-t2q3)
+
+✅ origin has both refs/heads/master and refs/heads/nautilus-t2q3 (confirmed via git ls-remote --heads origin)
+
+✅ No local changes are uncommitted (git status shows clean tree, except possibly the copied file is now tracked/committed)
+
+If any of items 1–4 fails, rerun the corresponding step from the section above.
+
+QUESTION 5 : Nautilus developers are actively working on one of the project repositories, /usr/src/kodekloudrepos/news-t2q1. 
+Recently, they decided to implement some new features in the application, and they want to maintain those new changes in a separate branch. 
+Below are the requirements that have been shared with the DevOps team:
+
+
+On Storage server in Stratos DC create a new branch xfusioncorp_news-t2q1 from master branch in /usr/src/kodekloudrepos/news-t2q1 git repo.
+
+Please do not try to make any changes in the code.
+
+Use below credentials to SSH into the storage server and to complete this task.
+
+Username: sarah
+Password: S3cure321
+
+Verify Tasks
+
+SOLUTION
+✅ Create the branch + Verify
+SSH as sarah:
+
+bash
+ssh sarah@ststor01
+# password: S3cure321
+🛠️ Steps to Complete the Task
+Go to the repository:
+
+bash
+cd /usr/src/kodekloudrepos/news-t2q1
+Make sure you are on master:
+
+bash
+git checkout master
+Create the new branch xfusioncorp_news-t2q1 from master (without switching):
+
+bash
+git branch xfusioncorp_news-t2q1 master
+This only creates a branch pointer — no code is changed, working tree stays on master, which satisfies the requirement "do not try to make any changes in the code."
+
+🔍 Verification Commands
+Run these inside /usr/src/kodekloudrepos/news-t2q1:
+
+bash
+cd /usr/src/kodekloudrepos/news-t2q1
+
+# 1. Confirm both branches exist
+git branch --list
+
+# 2. Confirm the new branch points to the same commit as master
+git rev-parse master xfusioncorp_news-t2q1
+
+# 3. Confirm no new commits were created (both at same hash)
+git log --oneline -2 master xfusioncorp_news-t2q1
+
+# 4. Confirm working tree is clean and still on master
+git status
+📋 Expected Verification Results
+Check	Expected Output
+git branch --list	Shows both master and xfusioncorp_news-t2q1, with * next to master
+git rev-parse master xfusioncorp_news-t2q1	Two identical commit hashes → branch created exactly from master
+git log --oneline -2 master xfusioncorp_news-t2q1	Same top commit shown for both
+git status	On branch master, nothing to commit, working tree clean (or only pre-existing untracked files)
+Sample expected git branch --list:
+
+text
+* master
+  xfusioncorp_news-t2q1
+Sample expected git rev-parse:
+
+text
+3f8a1c2b9e7d4...   ← master
+3f8a1c2b9e7d4...   ← xfusioncorp_news-t2q1  (identical)
+✅ Final Answer to "Verify Tasks"
+The task is complete and verified when:
+
+✅ Branch xfusioncorp_news-t2q1 exists locally (git branch --list shows it)
+
+✅ It points to the same commit as master (git rev-parse returns identical hashes)
+
+✅ No new commit was created (no code changes were made)
+
+✅ Working tree remains on master and is clean — confirming no code was modified
+
+If checks 1–2 pass but you see different hashes in check 2, the branch was not created from master — delete and recreate:
+
+bash
+git branch -D xfusioncorp_news-t2q1
+git branch xfusioncorp_news-t2q1 master
+No push is required — the task only asks to create the branch locally.
