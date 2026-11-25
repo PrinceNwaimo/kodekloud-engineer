@@ -1,0 +1,107 @@
+A new DevOps Engineer has joined the team and he will be assigned some Jenkins related tasks. 
+Before that, the team wanted to test a simple parameterized job to understand basic functionality of parameterized builds. 
+He is given a simple parameterized job to build in Jenkins. Please find more details below:
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+1. Create a parameterized job which should be named as parameterized-job
+
+2. Add a string parameter named Stage; its default value should be Build.
+
+3. Add a choice parameter named env; its choices should be Development, Staging and Production.
+
+4. Configure job to execute a shell command, which should echo both parameter values (you are passing in the job).
+
+5. Build the Jenkins job at least once with choice parameter value Production to make sure it passes.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins service. 
+So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. 
+Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case, please make sure to refresh the UI page.
+
+2. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. 
+You may also consider using a screen recording software such as loom.com to record and share your work.
+
+SOLUTION
+Here is the step-by-step guide to setting up the parameterized Jenkins job for your new DevOps Engineer. It is a good practice to take screenshots at each major step for documentation.
+
+🛠️ Step 1: Create the Parameterized Job
+Log in to the Jenkins UI using the credentials admin / Adm!n321.
+
+From the main dashboard, click New Item.
+
+Enter the name parameterized-job and select Freestyle project, then click OK.
+
+⚙️ Step 2: Add the String Parameter (Stage)
+On the job configuration page, scroll to the General section.
+
+Check the box for This project is parameterized.
+
+Click Add Parameter and select String Parameter.
+
+Configure it as follows:
+
+Name: Stage
+
+Default Value: Build
+
+(Optional) Description: Specify the stage name.
+
+📋 Step 3: Add the Choice Parameter (env)
+Click Add Parameter again and select Choice Parameter.
+
+Configure it as follows:
+
+Name: env
+
+Choices: Enter the following values, one per line:
+
+Development
+
+Staging
+
+Production
+
+(Optional) Description: Select the environment.
+
+💻 Step 4: Configure the Shell Command
+Scroll down to the Build section and click Add build step.
+
+Select Execute shell.
+
+In the Command text area, enter a script to echo both parameter values. For example:
+
+bash
+echo "Stage: $Stage"
+echo "Environment: $env"
+This uses the parameter names as variables ($Stage and $env) to access the values passed during the build.
+
+✅ Step 5: Save and Build with the "Production" Parameter
+Click Save at the bottom of the configuration page.
+
+On the job's dashboard, click Build with Parameters (do not use "Build Now").
+
+On the build form:
+
+Leave the Stage parameter as its default (Build).
+
+From the env dropdown, select Production.
+
+Click Build.
+
+🔍 Step 6: Verify the Build Success
+In the Build History on the left, click the latest build number (e.g., #1).
+
+Click Console Output.
+
+You should see output similar to the following, confirming the parameters were passed correctly and the job completed successfully:
+
+text
+Stage: Build
+Environment: Production
+Finished: SUCCESS
+
+💡 A Note on Plugins & Restarts
+The steps above use core Jenkins features and should not require additional plugins. However, if you are prompted to install plugins or restart Jenkins during the process, you can safely click "Restart Jenkins when installation is complete and no jobs are running" on the Update Center page. If the UI appears stuck during the restart, simply refresh your browser page to regain access.
+
