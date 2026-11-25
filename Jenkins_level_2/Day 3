@@ -1,0 +1,228 @@
+Some developers are working on a common repository where they are testing some features for an application. 
+They are having three branches (excluding the master branch) in this repository where they are adding changes related to these different features. 
+They want to test these changes on Stratos DC app servers so they need a Jenkins job using which they can deploy these different branches as per requirements. 
+Configure a Jenkins job accordingly.
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+Similarly, click on Gitea button to access the Gitea page. Login to Gitea server using username sarah and password Sarah_pass123.
+
+There is a Git repository named web_app on Gitea where developers are pushing their changes. 
+It has three branches version1, version2 and version3 (excluding the master branch). You need not to make any changes in the repository.
+
+Create a Jenkins job named app-job.
+
+Configure this job to have a choice parameter named Branch with choices as given below:
+
+version1
+
+version2
+
+version3
+
+
+Configure the job to fetch changes from above mentioned Git repository and make sure it should fetches the changes from the respective branch which you are passing as a choice in the choice parameter while building the job. 
+For example if you choose version1 then it must fetch and deploy the changes from branch version1.
+
+Configure this job to use custom workspace rather than a default workspace and custom workspace directory should be created under /var/lib/jenkins (for example /var/lib/jenkins/version1) location rather than under any sub-directory etc. 
+The job should use a workspace as per the value you will pass for Branch parameter while building the job. 
+For example if you choose version1 while building the job then it should create a workspace directory called version1 and should fetch Git repository etc within that directory only.
+
+Configure the job to deploy code (fetched from Git repository) on App Server 1 (stapp01) under /var/www/html directory.
+
+You can access the website by clicking on App button.
+
+Note:
+
+You might need to install some plugins and restart Jenkins service. So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. 
+Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case please make sure to refresh the UI page.
+
+SOLUTION
+The key issue in the previous attempt was a conflict in the syntax used for the custom workspace. While some sources suggest the ${Branch} format doesn't work in Freestyle jobs, a lab-specific solution for this exact KodeKloud scenario confirms that /var/lib/jenkins/${Branch} is the correct and working configuration. The earlier suggestion to use $Branch for the Git branch specifier is also correct.
+
+Here is the definitive, corrected guide to redo the task successfully.
+
+🔌 Step 1: Install Required Plugins
+Log in to Jenkins (username admin, password Adm!n321).
+
+Go to Manage Jenkins > Plugins > Available plugins.
+
+Install the Git and Publish Over SSH plugins. Restart Jenkins if prompted.
+
+🔑 Step 2: Configure the SSH Server for Deployment
+This is where the previous attempt failed with an "Auth fail" error. The fix is to force password authentication.
+
+Go to Manage Jenkins > Configure System.
+
+Scroll to the Publish over SSH section.
+
+Click Add and enter the following exact details for the lab server:
+
+Name: stapp01
+
+Hostname: stapp01
+
+Username: tony
+
+Password: Ir0nM@n (Check the box "Use password authentication, or use a different key" if it appears).
+
+Remote Directory: /var/www/html
+
+Click Test Configuration. You must see a Success message before proceeding.
+
+Click Save.
+
+🛠️ Step 3: Create the app-job and Add the Choice Parameter
+From the Jenkins dashboard, click New Item.
+
+Enter the name app-job, select Freestyle project, and click OK.
+
+In the General section, check This project is parameterized.
+
+Click Add Parameter and select Choice Parameter.
+
+Configure it as follows:
+
+Name: Branch
+
+Choices: (enter each on a new line)
+
+text
+version1
+version2
+version3
+📂 Step 4: Configure the Custom Workspace (The Critical Fix)
+Scroll down to the Advanced Project Options section.
+
+Check the box for Use custom workspace.
+
+In the Directory field, enter exactly: /var/lib/jenkins/${Branch}
+
+Why this works: For this specific lab environment, the ${Branch} syntax is confirmed to resolve correctly, creating directories like /var/lib/jenkins/version1. 
+This avoids the common mistake of hardcoding a path or using an incorrect variable format.
+
+📥 Step 5: Configure Source Code Management (Git)
+In the Source Code Management section, select Git.
+
+Enter the Repository URL for the web_app repository on Gitea (copy the HTTPS clone URL from the Gitea UI).
+
+Add Credentials if needed (e.g., username sarah, password Sarah_pass123).
+
+In the Branches to build section, change the Branch Specifier to exactly: */$Branch
+
+Why this works: The Git plugin requires the $Branch (not ${Branch}) format to dynamically read the parameter value during the SCM checkout phase.
+
+🚀 Step 6: Configure Post-Build Deployment (Publish Over SSH)
+Scroll to the Post-build Actions section.
+
+Click Add post-build action and select Send build artifacts over SSH.
+
+In the SSH Server dropdown, select the stapp01 server you configured.
+
+In the Transfers section, set:
+
+Source files: ** (This ensures all files from the workspace are transferred, not just index.html).
+
+Remove prefix: (leave blank).
+
+Remote directory: ( leave blank if the global config already sets this).
+
+Click Save.
+
+✅ Step 7: Build and Verify
+On the app-job page, click Build with Parameters.
+
+Select version1 from the Branch dropdown and click Build.
+
+Check the Console Output. You should see Jenkins:
+
+Creating the workspace /var/lib/jenkins/version1.
+
+Checking out the version1 branch from Git.
+
+Successfully transferring files to /var/www/html on stapp01 via SSH.
+
+To confirm, click the App button or log in to stapp01 and check that the correct version's files are present in /var/www/html.
+
+💡 Summary of Key Corrections
+Workspace Path: Use /var/lib/jenkins/${Branch} (not $Branch).
+
+Git Branch Specifier: Use */$Branch (not ${Branch}).
+
+SSH Authentication: Explicitly use password authentication with tony / Ir0nM@n to avoid the "Auth fail" error.
+
+For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. 
+You may also consider using a screen recording software such as loom.com to record and share your work.
+
+Good catch on checking the filesystem — but there's a problem hidden in that listing that you need to fix before submitting. 🚨
+
+🔍 What the Listing Reveals
+text
+-rw-r--r-- 1 tony tony   34 Nov 25 10:35 index.html
+drwxr-xr-x 3 tony tony 4096 Nov 25 10:51 var
+Two things stand out:
+
+index.html is dated 10:35, but the build you just ran completed at ~10:51. So the index.html you're seeing is not from your latest build — it's from an earlier deployment (likely the task's pre-seeded content or a previous attempt).
+
+A stray var directory was created at 10:51 — the exact time of your latest build.
+
+That var directory is the smoking gun for a classic Publish Over SSH misconfiguration: a doubled remote path. Your latest build actually deployed the files to:
+
+text
+/var/www/html/var/www/html/index.html
+instead of:
+
+text
+/var/www/html/index.html
+🐛 Why This Happened
+This occurs when both of these fields are set to the same path:
+
+Global config (Manage Jenkins > Configure System > Publish over SSH > stapp01 > Remote Directory): /var/www/html
+
+Job config (Post-build Actions > Send build artifacts over SSH > Transfers > Remote directory): /var/www/html
+
+The plugin appends the job-level remote directory to the global one, producing /var/www/html + /var/www/html = /var/www/html/var/www/html/. That's where your var folder came from.
+
+✅ How to Fix It
+Step 1 — Confirm the misplacement (optional but reassuring):
+
+bash
+ls -R /var/www/html/var
+You should see www/html/index.html nested inside it, confirming the doubled path.
+
+Step 2 — Fix the job config in Jenkins:
+
+Open app-job > Configure.
+
+Scroll to Post-build Actions > Send build artifacts over SSH.
+
+In the Transfers block, clear the "Remote directory" field entirely (leave it blank).
+
+Click Save.
+
+The global /var/www/html will now be applied only once, placing files directly in /var/www/html/.
+
+Step 3 — Clean up the stray directory on stapp01:
+
+bash
+rm -rf /var/www/html/var
+Step 4 — Rebuild and verify:
+
+In Jenkins, click Build with Parameters > select version1 > Build.
+
+On stapp01, run:
+
+bash
+ls -l /var/www/html
+cat /var/www/html/index.html
+You should now see only index.html with a fresh timestamp (matching the new build time), and no var directory.
+
+🎯 Why This Matters for Grading
+The task explicitly says to deploy "under /var/www/html directory." A nested /var/www/html/var/www/html/ path does not satisfy that requirement, even though the build reports SUCCESS. The grader will likely check the exact contents of /var/www/html, so the stray var folder and the stale index.html timestamp would both count against you.
+
+💡 Quick Recap
+Issue	Cause	Fix
+var/ directory appeared in /var/www/html	Remote directory set in both global and job config	Leave job-level Remote Directory blank
+index.html is stale (10:35, older than build)	Latest build wrote to the wrong nested path	Clear the stray var/ and rebuild
+Once you clear the job's remote directory field, delete the var folder, and rebuild, the index.html in /var/www/html will be freshly written by your job, and the task will be genuinely complete. 👍
+
