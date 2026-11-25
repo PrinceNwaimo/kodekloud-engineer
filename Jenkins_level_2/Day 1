@@ -1,0 +1,89 @@
+The DevOps team of xFusionCorp Industries is planning to create a number of Jenkins jobs for different tasks. 
+So to easily manage the jobs within Jenkins UI they decided to create different views for all Jenkins jobs based on usage/nature of these jobs, 
+- for example xfusion-crons view for all cron jobs. Based on the requirements shared below please perform the below mentioned task:
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and password Adm!n321.
+
+1. Create a Jenkins job named xfusion-test-job.
+
+2. Configure this job to run a simple bash command i.e echo "hello world!!".
+
+3. Create a view named xfusion-crons (it must be a global view of type List View) and make sure xfusion-test-job and xfusion-cron-job (which is already present on Jenkins) 
+jobs are listed under this new view.
+
+4. Schedule this newly created job to build periodically at every minute i.e * * * * * (please make sure to use the cron expression exactly same how it is mentioned here).
+
+5. Make sure the job builds successfully.
+
+Note:
+
+1. You might need to install some plugins and restart Jenkins service. 
+So, we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre. 
+Also, Jenkins UI sometimes gets stuck when Jenkins service restarts in the back end. In this case please make sure to refresh the UI page.
+
+2. For these kind of scenarios requiring changes to be done in a web UI, please take screenshots so that you can share it with us for review in case your task is marked incomplete. 
+You may also consider using a screen recording software such as loom.com to record and share your work.
+
+SOLUTION
+Here is the step-by-step guide to completing the Jenkins task for xFusionCorp Industries. Since you are working in a web UI, it is a good idea to take screenshots at each major step for your records.
+
+🛠️ Step 1: Create and Configure the Job
+Log in to the Jenkins UI using the credentials admin / Adm!n321.
+
+On the main dashboard, click New Item.
+
+In the Enter an item name field, type xfusion-test-job.
+
+Select Freestyle project and click OK .
+
+Scroll down to the Build section and click Add build step.
+
+Select Execute shell .
+
+In the Command text box, enter the exact command: echo "hello world!!" .
+
+⏰ Step 2: Schedule the Job to Run Every Minute
+While still on the job configuration page, scroll to the Build Triggers section.
+
+Check the box for Build periodically .
+
+In the Schedule text field, enter the exact cron expression: * * * * * (This means the job will run every minute) .
+
+📂 Step 3: Create the Global List View and Add Jobs
+Save the job configuration first (scroll to the bottom and click Save).
+
+Go back to the Jenkins Dashboard (the main page).
+
+Click the + (New View) tab located next to the existing view tabs .
+
+In the View name field, type xfusion-crons.
+
+Under Type, select List View .
+
+Click Create.
+
+On the view configuration page, scroll to the Jobs section.
+
+Check the boxes to add both xfusion-test-job and the already existing xfusion-cron-job to this view .
+
+Scroll down and click Save.
+
+✅ Step 4: Verify the Build and Handle Plugins
+Navigate to the xfusion-test-job page.
+
+Click Build Now from the left-hand menu to trigger an immediate build. This ensures the job is configured correctly before the scheduled trigger takes over .
+
+Check the Build History on the left. A blue/green ball indicates a successful build. You can click the build number and then Console Output to see the hello world!! message.
+
+Regarding Plugins & Restart: The steps above generally use core Jenkins functionality. If you are prompted to install plugins or restart Jenkins during the process (e.g., for UI enhancements), it is safe to click the "Restart Jenkins when installation is complete and no jobs are running" button on the Update Center page . The Jenkins UI may appear stuck during the restart; simply refresh the browser page to regain access .
+
+💡 Summary of the Configuration
+Job Name: xfusion-test-job
+
+Build Step: echo "hello world!!"
+
+Schedule: * * * * *
+
+View: xfusion-crons (Global List View) containing both xfusion-test-job and xfusion-cron-job.
+
+Once these steps are completed, the job will build automatically every minute, and both jobs will be neatly organized under the xfusion-crons view.
