@@ -1,0 +1,40 @@
+One of the Nautilus developer was working to test new changes on a container. He wants to keep a backup of his changes to the container. 
+A new request has been raised for the DevOps team to create a new image from this container. Below are more details about it:
+
+a. Create an image ecommerce:nautilus on Application Server 2 from a container ubuntu_latest that is running on same server.
+
+SOLUTION
+To create a new image from a running container, use docker commit. This snapshots the container's current filesystem state into a new image.
+
+🛠️ Commands to Execute
+Run the following on Application Server 2 (App Server 2):
+
+bash
+# 1. (Optional) Confirm the container is running
+sudo docker ps
+
+# 2. Create the new image from the container
+sudo docker commit ubuntu_latest ecommerce:nautilus
+📋 Verification
+Confirm the new image was created successfully:
+
+bash
+sudo docker images | grep ecommerce
+Expected output:
+
+text
+ecommerce   nautilus   <new-image-id>   ...   <size>
+You can also inspect the image's details (including the container it was created from) with:
+
+bash
+sudo docker inspect ecommerce:nautilus
+💡 Important Notes
+docker commit creates the image from the container's current state (including any file changes the developer made), so all in-container modifications are preserved in ecommerce:nautilus.
+
+The source container ubuntu_latest must exist (running or stopped) on App Server 2 for the commit to succeed.
+
+If you want to include a commit message (good practice for tracking), use:
+
+bash
+sudo docker commit -m "Backup of developer changes" ubuntu_latest ecommerce:nautilus
+The container keeps running after the commit; docker commit does not stop or modify it.
