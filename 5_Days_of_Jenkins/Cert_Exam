@@ -1,0 +1,371 @@
+As the team was in the process of setting up a new Jenkins server, where they were adding agent nodes to handle workloads. 
+They want to add a label for Jenkins master itself. Find below more details about the same.
+
+Add a label kke-jenkins for Jenkins master.
+
+Click the Jenkins button on the top bar to open the Jenkins UI. Log in using username admin and password Adm!n321.
+
+SOLUTION
+To add a label to the Jenkins master (now referred to as the Built-In Node in modern Jenkins versions), you can do this directly from the Jenkins UI.
+
+🛠️ Step-by-Step Guide
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using the credentials:
+
+Username: admin
+
+Password: Adm!n321
+
+Navigate to Node Management: From the Jenkins dashboard, go to Manage Jenkins → Manage Nodes and Clouds (or Manage Nodes in some versions).
+
+Select the Built-In Node: You will see a list of nodes. The master node is typically named Built-In Node (older versions called it master). Click on it to select it.
+
+Open Configuration: Click the Configure button (or the downward arrow next to the node name and select Configure).
+
+Add the Label: In the configuration page, locate the Labels field. Enter the label kke-jenkins exactly as required. Note that if you need to add multiple labels, they should be separated by spaces.
+
+Save the Configuration: Scroll down and click Save to apply the changes.
+
+✅ Verification
+After saving, you will be returned to the node list. The new label kke-jenkins should now be visible next to the Built-In Node.
+
+💡 Note for Newer Jenkins Versions
+In Jenkins versions 2.307 and later, the default master node was officially renamed to Built-In Node, and the implicit master label was removed. Manually adding a label like kke-jenkins (or master if needed for legacy jobs) is the standard workaround to ensure jobs can target the controller correctly.
+
+
+QUESTION 2:
+After setting up the Jenkins server, the Nautilus team was analysing some security settings w.r.t the same. They wanted to disable the functionality to remember the login for a user so that user will have to login each time to the Jenkins server. They came up with below requirements for the same.
+Turn on the Disable “Keep me signed in” option in Jenkins configuration.
+
+Click the Jenkins button on the top bar to open the Jenkins UI. Log in using username admin and password Adm!n321.
+
+SOLUTION
+To disable the "Keep me signed in" functionality for all users, you can modify the global security settings in the Jenkins UI. This setting removes the checkbox from the login page, ensuring that users must authenticate each time they access the instance.
+
+🛠️ Step-by-Step Guide
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using the credentials:
+
+Username: admin
+
+Password: Adm!n321
+
+Navigate to Security Configuration: From the Jenkins dashboard, go to Manage Jenkins → Configure Global Security (or Configure Security depending on your version).
+
+Locate and Enable the Option: Scroll through the security settings to find the checkbox labeled Disable remember me (or Disable "Keep me signed in" in some versions). Check this box.
+
+Save the Configuration: Click Save at the bottom of the page to apply the changes.
+
+✅ Verification
+After saving, log out of Jenkins and return to the login screen. The "Keep me signed in" checkbox will no longer be displayed, and users will be required to enter their credentials every time they access the Jenkins server.
+
+💡 Note
+This option has been available since Jenkins v1.534 and is the standard method to disable the remember-me cookie functionality. If you are using a newer version, the label might appear as Disable "Keep me signed in" to match the login page wording.
+
+QUESTION 3
+To organize jobs on the Jenkins server, the Nautilus team wants to create views for easier navigation. Below are further details.
+
+
+Create a list view named dev-view (it can be empty). Make sure this view is a global view.
+
+Click the Jenkins button on the top bar to open the Jenkins UI. Log in using username admin and password Adm!n321.
+
+SOLUTION
+Creating a global list view named dev-view is a straightforward process in Jenkins. Since it can be empty, you will simply create the view and save it without selecting any jobs.
+
+🛠️ Step-by-Step Guide
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using:
+
+Username: admin
+
+Password: Adm!n321
+
+Start Creating a New View: From the Jenkins main dashboard, click the + (New View) tab located next to the existing view tabs.
+
+If the tab is not visible, you can navigate directly to JENKINS_URL/newView in your browser.
+
+Enter the View Name and Type:
+
+In the View name field, type dev-view.
+
+Under Type, select List View.
+
+Create the View: Click Create (or OK, depending on your version) to proceed to the view configuration page.
+
+Save the Empty View: Since the view can be empty, you do not need to check any jobs under the Jobs section. Simply scroll down and click Save.
+
+✅ Verification
+After saving, you will be returned to the dashboard, and the new dev-view tab will appear alongside the existing views. Clicking on it will show an empty list, confirming that the global list view has been successfully created.
+
+QUESTION 4:
+After setting up a new Jenkins server, the Nautilus team aimed to create and test some jobs to ensure everything is configured correctly. They would like to create and run some jobs to verify few things. Currently, they have very basic requirements as outlined below.
+
+
+Click the Jenkins button on the top bar to open the Jenkins UI. Log in using username admin and password Adm!n321.
+
+Create a Jenkins job named test-job-t3q6.
+
+Configure this job to run a simple bash command i.e echo "hello world!!".
+
+Make sure the job builds successfully.
+
+SOLUTION
+Creating a simple freestyle job that echoes a message is straightforward. Below are the step-by-step instructions.
+
+🛠️ Step-by-Step Guide
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using:
+
+Username: admin
+
+Password: Adm!n321
+
+Create a New Job:
+
+From the Jenkins dashboard, click New Item (visible in the left sidebar).
+
+In the Enter an item name field, type test-job-t3q6 (exactly as specified).
+
+Select Freestyle project.
+
+Click OK.
+
+Configure the Build Step:
+
+Scroll down to the Build section.
+
+Click Add build step and select Execute shell.
+
+In the Command box, enter the following (exactly as required):
+
+bash
+echo "hello world!!"
+Save the Job: Scroll to the bottom and click Save.
+
+Build the Job:
+
+On the job page, click Build Now in the left sidebar.
+
+A new build will appear under Build History. Click on the build number (e.g., #1).
+
+Click Console Output to verify the result.
+
+✅ Verification
+In the Console Output, you should see:
+
+text
+Started by user admin
+Running as SYSTEM
+Building in workspace /var/lib/jenkins/workspace/test-job-t3q6
+[test-job-t3q6] $ /bin/sh -xe /tmp/jenkins...sh
++ echo 'hello world!!'
+hello world!!
+Finished: SUCCESS
+The build is successful when the output shows Finished: SUCCESS and the blue ball icon appears next to the build number in the Build History.
+
+QUESTION 5:
+The Nautilus DevOps team is working on to configure a Jenkins server. They are working on to configuring a couple of pipelines and for that they need to install some plugins. Recently they have shared below requirements.
+
+
+Click the Jenkins button on the top bar to open the Jenkins UI. Log in using username admin and password Adm!n321.
+
+Install jenkins junit plugin. You might need to restart Jenkins service to install this plugin, so we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre.
+
+SOLUTION
+Installing the JUnit plugin is a straightforward process done entirely through the Jenkins web interface. The exact menu names can vary slightly depending on your Jenkins version, but the overall path is consistent.
+
+🛠️ Step-by-Step Guide to Install the JUnit Plugin
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using the credentials:
+
+Username: admin
+
+Password: Adm!n321
+
+Navigate to the Plugin Manager:
+
+From the Jenkins dashboard, go to Manage Jenkins.
+
+Click on Plugins (in some versions, this may be labeled Manage Plugins).
+
+Find and Select the JUnit Plugin:
+
+Open the Available tab.
+
+In the search box, type JUnit.
+
+Locate the JUnit Plugin in the results and check the box next to it.
+
+Install the Plugin:
+
+You have two options. The simplest is to click the "Install without restart" button at the bottom of the page. This installs the plugin and allows it to be used immediately.
+
+Alternatively, you can select the "Restart Jenkins when installation is complete and no jobs are running" checkbox before clicking the install button. This will automatically restart Jenkins once the plugin is downloaded and installed, which is sometimes necessary for certain plugins to fully activate.
+
+Verify the Installation (Optional):
+
+After the installation process finishes, you can switch to the Installed tab in the Plugin Manager.
+
+Search for JUnit to confirm that the plugin is now listed, indicating a successful installation.
+
+💡 A Quick Note on Jenkins UI
+The task mentions that the Jenkins UI can sometimes get stuck after a restart. If you choose to restart Jenkins, simply refresh your browser page if it seems unresponsive; the UI should eventually load and the plugin will be ready to use.
+
+QUESTION 6:
+The Nautilus DevOps team want to install and setup some Jenkins plugins which are needed by some of the jobs they are going to create. Recently they have shared below requirements.
+
+
+Click on the Jenkins button on the top bar to access the Jenkins UI. Login using username admin and Adm!n321 password.
+
+Install the Jenkins plugin Mailer, please keep it disabled for now. You might need to restart Jenkins service to install these plugins, so we recommend clicking on Restart Jenkins when installation is complete and no jobs are running on plugin installation/update page i.e update centre.
+
+SOLUTION
+To install the Jenkins Mailer plugin and keep it disabled, you will first use the Plugin Manager to install it, and then use the Installed tab to disable it. This approach ensures the plugin is present on the system for any dependencies but its functionality remains inactive until you choose to enable it.
+
+🛠️ Step-by-Step Guide
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using the credentials:
+
+Username: admin
+
+Password: Adm!n321
+
+Navigate to the Plugin Manager:
+
+From the Jenkins dashboard, go to Manage Jenkins.
+
+Click on Plugins (or Manage Plugins).
+
+Install the Mailer Plugin:
+
+Open the Available tab.
+
+In the search box, type Mailer.
+
+Locate the Mailer Plugin in the results and check the box next to it.
+
+Click the "Install without restart" button at the bottom of the page. This installs the plugin and allows it to be managed immediately without an immediate Jenkins restart.
+
+Disable the Plugin:
+
+After installation, switch to the Installed tab in the Plugin Manager.
+
+In the search box (if available) or by scrolling, find the Mailer plugin.
+
+You will see a checkbox in the Enabled column to the right of the plugin name.
+
+Uncheck this checkbox to disable the plugin.
+
+Restart Jenkins (Optional but Recommended):
+
+While the "Install without restart" option makes the plugin visible for configuration, some changes may require a restart to fully take effect. You can restart Jenkins by checking the "Restart Jenkins when installation is complete and no jobs are running" option on the installation page, or by navigating to JENKINS_URL/restart. After a restart, the disabled state will be firmly applied.
+
+💡 Important Note on Dependencies
+Be aware that the Mailer plugin is a dependency for many other plugins (such as Git, GitLab, and Email Extension). If you later install or update plugins that depend on Mailer, Jenkins may automatically re-enable it. If this happens, you can simply return to the Installed tab and uncheck the "Enabled" box again to keep it disabled.
+
+QUESTION 7:
+The Nautilus DevOps team has recently installed a new Jenkins server and is now in the process of creating users and groups to grant access to different team members. Below are the current requirements:
+
+
+Create a user named royt4q1, full name Roy, email roy@example.com and password royt4q1.
+
+Click the Jenkins button on the top bar to open the Jenkins UI. Log in using username admin and password Adm!n321.
+
+SOLUTION
+Creating a new user in Jenkins is a straightforward process that can be completed entirely through the web interface. The core steps involve navigating to the user management section, filling out the required fields, and saving the new account.
+
+🛠️ Step-by-Step Guide to Create the User
+Log in to Jenkins: Click the Jenkins button on the top bar and log in using the credentials:
+
+Username: admin
+
+Password: Adm!n321
+
+Navigate to the Users Page:
+
+From the Jenkins dashboard, go to Manage Jenkins.
+
+Select Users (this is typically found under the "Security" section).
+
+Start Creating a New User:
+
+On the Users page, click the Create User link in the left-hand menu.
+
+Fill in the User Details:
+
+You will be presented with a form. Enter the information exactly as specified in the requirements:
+
+Username: royt4q1
+
+Password: royt4q1
+
+Confirm Password: royt4q1
+
+Full Name: Roy
+
+Email Address: roy@example.com
+
+Save the New User:
+
+Click the Create User button at the bottom of the form to finalize the process.
+
+✅ Verification
+After saving, you will be returned to the Users page, and the new user royt4q1 (with the full name Roy) will now be listed, confirming that the account has been successfully created.
+
+QUESTION 8:
+It's a common issue in some Jenkins configurations where the "Email Address" field doesn't appear on the user creation form. This is almost always because the Mailer plugin, which provides this field, is either not installed, or as you did in a previous task, it has been disabled.
+
+Here are a few ways to resolve this and attach the email to the admin2 user.
+
+✅ Solution 1: Enable the Mailer Plugin (Recommended)
+The most direct fix is to ensure the Mailer plugin is active. In a previous task, you were asked to install it but keep it disabled, which is likely the root cause here.
+
+Go to Manage Jenkins > Plugins.
+
+Switch to the Installed tab.
+
+Find the Mailer plugin in the list.
+
+Check the box in the Enabled column to activate it.
+
+Restart Jenkins for the change to take full effect.
+
+After Jenkins restarts, try creating the user again; the Email Address field should now be visible.
+
+⚙️ Solution 2: Add Email via Jenkins Script Console
+If you prefer not to restart or the UI still doesn't cooperate, you can add the email address programmatically. This method bypasses the UI form entirely.
+
+Go to Manage Jenkins > Script Console.
+
+Paste the following Groovy script, replacing the email address with the one for admin2:
+
+groovy
+import hudson.model.User
+import hudson.tasks.Mailer
+
+def user = User.get('admin2', false)
+if (user != null) {
+    user.addProperty(new Mailer.UserProperty('admin2@example.com'))
+    user.save()
+    println "Email updated for admin2"
+} else {
+    println "User admin2 not found"
+}
+Click Run. The script will attach the specified email address to the user account.
+
+📝 Solution 3: Manually Edit the User's Configuration File
+This is a more hands-on approach that involves editing the user's config.xml file directly on the Jenkins server.
+
+Create the user admin2 through the normal UI (even without the email field). This creates the necessary user directory.
+
+SSH into the Jenkins server.
+
+Navigate to the user's configuration directory: $JENKINS_HOME/users/admin2/. The JENKINS_HOME is typically /var/lib/jenkins or /var/jenkins_home.
+
+Open the config.xml file in a text editor.
+
+Find or add the <emailAddress> tag and set its value to admin2@example.com:
+
+xml
+<emailAddress>admin2@example.com</emailAddress>
+Save the file and restart the Jenkins service for the change to be recognized.
+
+💡 Final Recommendation
+For this specific KodeKloud task, Solution 1 (enabling the Mailer plugin) is the most appropriate and permanent fix. It aligns with standard Jenkins setup, and once the plugin is enabled, the email field will be available for all future user creations without the need for manual scripting or file edits.
+
+
