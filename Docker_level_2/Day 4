@@ -1,0 +1,65 @@
+One of the Nautilus DevOps team members was working to configure services on a kkloud container that is running on App Server 3 in Stratos Datacenter. 
+Due to some personal work he is on PTO for the rest of the week, but we need to finish his pending work ASAP. Please complete the remaining work as per details given below:
+
+a. Install apache2 in kkloud container using apt that is running on App Server 3 in Stratos Datacenter.
+b. Configure Apache to listen on port 5000 instead of default http port. 
+Do not bind it to listen on specific IP or hostname only, i.e it should listen on localhost, 127.0.0.1, container ip, etc.
+c. Make sure Apache service is up and running inside the container. Keep the container in running state at the end.
+
+SOLUTION
+To complete the pending work, you need to enter the kkloud container on App Server 3, install Apache, reconfigure it to listen on port 5000 across all interfaces, and then start the service.
+
+🛠️ Step-by-Step Commands
+Execute the following commands on App Server 3:
+
+bash
+# 1. Enter the running kkloud container
+sudo docker exec -it kkloud /bin/bash
+
+# 2. Inside the container: Update package lists and install Apache2
+apt-get update
+apt-get install -y apache2
+
+# 3. Change the Listen directive in ports.conf from 80 to 5000
+sed -i 's/^Listen 80$/Listen 5000/' /etc/apache2/ports.conf
+
+# 4. Update the default VirtualHost to use port 5000
+sed -i 's/<VirtualHost \*:80>/<VirtualHost *:5000>/' /etc/apache2/sites-available/000-default.conf
+
+# 5. Verify the configuration changes
+grep -R "Listen\|VirtualHost" /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
+You should see:
+
+text
+Listen 5000
+<VirtualHost *:5000>
+The *:5000 binding ensures Apache listens on all interfaces (localhost, 127.0.0.1, container IP, etc.), as required.
+
+bash
+# 6. Test the Apache configuration syntax
+apache2ctl configtest
+# Expected output: Syntax OK
+
+# 7. Start the Apache service
+service apache2 start
+Note: In a container, use service apache2 start rather than systemctl, as systemd is typically not available inside containers.
+
+bash
+# 8. Confirm Apache is running and listening on port 5000
+service apache2 status
+ss -lntp | grep 5000
+# Expected: LISTEN 0 511 0.0.0.0:5000 0.0.0.0:*
+bash
+# 9. (Optional) Test locally that Apache responds on the new port
+curl http://localhost:5000
+# Expected: The default Apache "It works!" page
+✅ Final Verification
+After exiting the container, confirm that the kkloud container is still running on the host:
+
+bash
+# Exit the container
+exit
+
+# Back on App Server 3, verify container status
+sudo docker ps | grep kkloud
+The output should show the kkloud container with an Up status.
