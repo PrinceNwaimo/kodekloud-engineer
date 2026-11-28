@@ -1,0 +1,51 @@
+As per recent requirements shared by the Nautilus application development team, they need custom images created for one of their projects. 
+Several of the initial testing requirements are already been shared with DevOps team. 
+Therefore, create a docker file /opt/docker/Dockerfile (please keep D capital of Dockerfile) on App server 1 in Stratos DC and configure to build an image with the following requirements:
+
+a. Use ubuntu:24.04 as the base image.
+
+b. Install apache2 and configure it to work on 5001 port. (do not update any other Apache configuration settings like document root etc).
+
+SOLUTION
+On App Server 1 in Stratos DC, create /opt/docker/Dockerfile with the following content:
+
+bash
+sudo mkdir -p /opt/docker
+sudo tee /opt/docker/Dockerfile > /dev/null <<'EOF'
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y apache2 && \
+    sed -i 's/^Listen 80$/Listen 5001/' /etc/apache2/ports.conf && \
+    sed -i 's/<VirtualHost \*:80>/<VirtualHost *:5001>/' /etc/apache2/sites-available/000-default.conf && \
+    rm -rf /var/lib/apt/lists/*
+
+EXPOSE 5001
+
+CMD ["apache2ctl", "-D", "FOREGROUND"]
+EOF
+Verify the file:
+
+bash
+cat /opt/docker/Dockerfile
+To build the image (replace <image-name>:<tag> as needed):
+
+bash
+cd /opt/docker
+sudo docker build -t <image-name>:<tag> .
+This Dockerfile:
+
+Uses ubuntu:24.04 as the base image.
+
+Installs apache2 using apt.
+
+Changes Apache’s listen port from 80 to 5001 in /etc/apache2/ports.conf.
+
+Updates only the default VirtualHost port from 80 to 5001; it does not change document root or other Apache settings.
+
+Exposes port 5001.
+
+Starts Apache in the foreground so the container stays running.
+
